@@ -436,7 +436,7 @@ Added Claude Code permission settings for local development (pip install command
 | `0017_add_send_back_fields_and_permission` | Add `sent_back_by`, `sent_back_at` fields and `can_send_back_arrival_slip` permission |
 | `0018_add_send_back_perm_to_groups` | Grant send-back permission to `qc_store`, `qc_chemist`, `qc_manager` groups |
 
-## New Environment Variables Required
+<!-- ## New Environment Variables Required -->
 
 | Variable | Description |
 |----------|-------------|

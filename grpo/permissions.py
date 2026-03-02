@@ -43,3 +43,10 @@ class CanViewGRPOHistory(BasePermission):
 
     def has_permission(self, request, view):
         return request.user.has_perm("grpo.can_view_grpo_history")
+
+
+class CanManageGRPOAttachments(BasePermission):
+    """Permission to upload/manage GRPO attachments."""
+
+    def has_permission(self, request, view):
+        return request.user.has_perm("grpo.add_grpoattachment")

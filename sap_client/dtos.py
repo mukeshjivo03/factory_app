@@ -12,6 +12,9 @@ class POItemDTO:
     uom: str
     rate: float = 0.0
     line_num: int = 0
+    tax_code: str = ""
+    warehouse_code: str = ""
+    account_code: str = ""
 
 
 @dataclass
@@ -21,6 +24,8 @@ class PODTO:
     supplier_name: str
     items: List[POItemDTO]
     doc_entry: int = 0
+    branch_id: Optional[int] = None
+    vendor_ref: str = ""
 
 
 @dataclass

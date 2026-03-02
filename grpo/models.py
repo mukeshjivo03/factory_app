@@ -11,6 +11,13 @@ class GRPOStatus(models.TextChoices):
     PARTIALLY_POSTED = "PARTIALLY_POSTED", "Partially Posted"
 
 
+class SAPAttachmentStatus(models.TextChoices):
+    PENDING = "PENDING", "Pending Upload"
+    UPLOADED = "UPLOADED", "Uploaded to SAP"
+    LINKED = "LINKED", "Linked to GRPO Document"
+    FAILED = "FAILED", "Upload Failed"
+
+
 class GRPOPosting(models.Model):
     """
     Tracks GRPO postings to SAP for completed gate entries.
@@ -96,3 +103,48 @@ class GRPOLinePosting(models.Model):
 
     def __str__(self):
         return f"{self.po_item_receipt.item_name} - {self.quantity_posted}"
+
+
+class GRPOAttachment(models.Model):
+    """
+    Stores files attached to a GRPO posting.
+    Files are saved locally and then uploaded to SAP Attachments2 endpoint.
+    """
+    grpo_posting = models.ForeignKey(
+        GRPOPosting,
+        on_delete=models.CASCADE,
+        related_name="attachments"
+    )
+
+    file = models.FileField(upload_to="grpo_attachments/")
+    original_filename = models.CharField(
+        max_length=255,
+        help_text="Original uploaded filename"
+    )
+
+    # SAP sync tracking
+    sap_attachment_status = models.CharField(
+        max_length=20,
+        choices=SAPAttachmentStatus.choices,
+        default=SAPAttachmentStatus.PENDING
+    )
+    sap_absolute_entry = models.IntegerField(
+        null=True, blank=True,
+        help_text="SAP Attachments2 AbsoluteEntry after upload"
+    )
+    sap_error_message = models.TextField(blank=True, null=True)
+
+    # Audit fields
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="grpo_attachments"
+    )
+
+    class Meta:
+        ordering = ["-uploaded_at"]
+
+    def __str__(self):
+        return f"Attachment for GRPO {self.grpo_posting_id} - {self.original_filename}"

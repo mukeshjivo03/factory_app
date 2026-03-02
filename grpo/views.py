@@ -3,6 +3,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.parsers import MultiPartParser, FormParser
 
 from company.permissions import HasCompanyContext
 from sap_client.exceptions import SAPConnectionError, SAPDataError, SAPValidationError
@@ -12,7 +13,9 @@ from .serializers import (
     GRPOPreviewSerializer,
     GRPOPostRequestSerializer,
     GRPOPostingSerializer,
-    GRPOPostResponseSerializer
+    GRPOPostResponseSerializer,
+    GRPOAttachmentSerializer,
+    GRPOAttachmentUploadSerializer,
 )
 from .permissions import (
     CanViewPendingGRPO,
@@ -20,6 +23,7 @@ from .permissions import (
     CanCreateGRPOPosting,
     CanViewGRPOHistory,
     CanViewGRPOPosting,
+    CanManageGRPOAttachments,
 )
 
 logger = logging.getLogger(__name__)
@@ -88,20 +92,10 @@ class GRPOPreviewAPI(APIView):
 class PostGRPOAPI(APIView):
     """
     Post GRPO to SAP for a specific PO receipt.
-    Updates accepted quantities in POItemReceipt before posting.
+    Includes PO linking (BaseEntry/BaseLine/BaseType), new line-level fields,
+    vendor reference, extra charges, and structured comments.
 
     POST /api/grpo/post/
-    {
-        "vehicle_entry_id": 123,
-        "po_receipt_id": 456,
-        "items": [
-            {"po_item_receipt_id": 1, "accepted_qty": 100.5},
-            {"po_item_receipt_id": 2, "accepted_qty": 50.0}
-        ],
-        "branch_id": 1,  // required - SAP Branch ID (BPLId)
-        "warehouse_code": "WH01",  // optional
-        "comments": "Gate entry completed"  // optional
-    }
     """
     permission_classes = [IsAuthenticated, HasCompanyContext, CanCreateGRPOPosting]
 
@@ -123,7 +117,9 @@ class PostGRPOAPI(APIView):
                 items=serializer.validated_data["items"],
                 branch_id=serializer.validated_data["branch_id"],
                 warehouse_code=serializer.validated_data.get("warehouse_code"),
-                comments=serializer.validated_data.get("comments")
+                comments=serializer.validated_data.get("comments"),
+                vendor_ref=serializer.validated_data.get("vendor_ref"),
+                extra_charges=serializer.validated_data.get("extra_charges"),
             )
 
             response_data = {
@@ -202,7 +198,7 @@ class GRPOPostingDetailAPI(APIView):
                 "vehicle_entry",
                 "po_receipt",
                 "posted_by"
-            ).prefetch_related("lines").get(id=posting_id)
+            ).prefetch_related("lines", "attachments").get(id=posting_id)
         except GRPOPosting.DoesNotExist:
             return Response(
                 {"detail": "GRPO posting not found"},
@@ -211,3 +207,126 @@ class GRPOPostingDetailAPI(APIView):
 
         serializer = GRPOPostingSerializer(posting)
         return Response(serializer.data)
+
+
+class GRPOAttachmentListCreateAPI(APIView):
+    """
+    List and upload attachments for a GRPO posting.
+
+    GET  /api/grpo/<posting_id>/attachments/
+    POST /api/grpo/<posting_id>/attachments/  (multipart/form-data)
+    """
+    permission_classes = [IsAuthenticated, HasCompanyContext, CanManageGRPOAttachments]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get(self, request, posting_id):
+        from .models import GRPOAttachment
+
+        attachments = GRPOAttachment.objects.filter(
+            grpo_posting_id=posting_id
+        ).order_by("-uploaded_at")
+
+        serializer = GRPOAttachmentSerializer(
+            attachments, many=True, context={"request": request}
+        )
+        return Response(serializer.data)
+
+    def post(self, request, posting_id):
+        serializer = GRPOAttachmentUploadSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(
+                {"detail": "Invalid file upload", "errors": serializer.errors},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        service = GRPOService(company_code=request.company.company.code)
+
+        try:
+            attachment = service.upload_grpo_attachment(
+                grpo_posting_id=posting_id,
+                file=serializer.validated_data["file"],
+                user=request.user,
+            )
+
+            response_serializer = GRPOAttachmentSerializer(
+                attachment, context={"request": request}
+            )
+
+            return Response(
+                response_serializer.data,
+                status=status.HTTP_201_CREATED
+            )
+
+        except ValueError as e:
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+class GRPOAttachmentDeleteAPI(APIView):
+    """
+    Delete a GRPO attachment.
+
+    DELETE /api/grpo/<posting_id>/attachments/<attachment_id>/
+    """
+    permission_classes = [IsAuthenticated, HasCompanyContext, CanManageGRPOAttachments]
+
+    def delete(self, request, posting_id, attachment_id):
+        from .models import GRPOAttachment
+
+        try:
+            attachment = GRPOAttachment.objects.get(
+                id=attachment_id,
+                grpo_posting_id=posting_id,
+            )
+        except GRPOAttachment.DoesNotExist:
+            return Response(
+                {"detail": "Attachment not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        if attachment.file:
+            attachment.file.delete(save=False)
+
+        attachment.delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class GRPOAttachmentRetryAPI(APIView):
+    """
+    Retry uploading a FAILED attachment to SAP.
+
+    POST /api/grpo/<posting_id>/attachments/<attachment_id>/retry/
+    """
+    permission_classes = [IsAuthenticated, HasCompanyContext, CanManageGRPOAttachments]
+
+    def post(self, request, posting_id, attachment_id):
+        from .models import GRPOAttachment
+
+        if not GRPOAttachment.objects.filter(
+            id=attachment_id, grpo_posting_id=posting_id
+        ).exists():
+            return Response(
+                {"detail": "Attachment not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        service = GRPOService(company_code=request.company.company.code)
+
+        try:
+            attachment = service.retry_attachment_upload(
+                attachment_id=attachment_id
+            )
+
+            serializer = GRPOAttachmentSerializer(
+                attachment, context={"request": request}
+            )
+            return Response(serializer.data)
+
+        except ValueError as e:
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )

@@ -44,7 +44,12 @@ class HanaPOReader:
                     T1."unitMsr"       AS uom,
                     T1."Price"         AS rate,
                     T0."DocEntry"      AS doc_entry,
-                    T1."LineNum"       AS line_num
+                    T1."LineNum"       AS line_num,
+                    IFNULL(T1."TaxCode", '')   AS tax_code,
+                    IFNULL(T1."WhsCode", '')   AS warehouse_code,
+                    IFNULL(T1."AcctCode", '')  AS account_code,
+                    T0."BPLId"         AS branch_id,
+                    IFNULL(T0."NumAtCard", '') AS vendor_ref
                 FROM "{schema}"."OPOR" T0
                 JOIN "{schema}"."POR1" T1 ON T0."DocEntry" = T1."DocEntry"
                 WHERE T0."CardCode" = ?
@@ -88,6 +93,11 @@ class HanaPOReader:
             supplier_name = row[2]
             doc_entry = int(row[10])
             line_num = int(row[11])
+            tax_code = row[12] or ""
+            warehouse_code = row[13] or ""
+            account_code = row[14] or ""
+            branch_id = int(row[15]) if row[15] is not None else None
+            vendor_ref = row[16] or ""
 
             item = POItemDTO(
                 po_item_code=row[3],
@@ -97,7 +107,10 @@ class HanaPOReader:
                 remaining_qty=float(row[7]),
                 uom=row[8],
                 rate=float(row[9]),
-                line_num=line_num
+                line_num=line_num,
+                tax_code=tax_code,
+                warehouse_code=warehouse_code,
+                account_code=account_code,
             )
 
             if po_number not in po_dict:
@@ -105,6 +118,8 @@ class HanaPOReader:
                     'supplier_code': supplier_code,
                     'supplier_name': supplier_name,
                     'doc_entry': doc_entry,
+                    'branch_id': branch_id,
+                    'vendor_ref': vendor_ref,
                     'items': []
                 }
 
@@ -117,7 +132,9 @@ class HanaPOReader:
                 supplier_code=po_data['supplier_code'],
                 supplier_name=po_data['supplier_name'],
                 items=po_data['items'],
-                doc_entry=po_data['doc_entry']
+                doc_entry=po_data['doc_entry'],
+                branch_id=po_data['branch_id'],
+                vendor_ref=po_data['vendor_ref'],
             ))
 
         return po_list

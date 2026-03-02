@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import GRPOPosting, GRPOLinePosting
+from .models import GRPOPosting, GRPOLinePosting, GRPOAttachment
 
 
 class GRPOLinePostingInline(admin.TabularInline):
@@ -7,6 +7,17 @@ class GRPOLinePostingInline(admin.TabularInline):
     extra = 0
     readonly_fields = ["po_item_receipt", "quantity_posted", "base_entry", "base_line"]
     can_delete = False
+
+
+class GRPOAttachmentInline(admin.TabularInline):
+    model = GRPOAttachment
+    extra = 0
+    readonly_fields = [
+        "file", "original_filename", "sap_attachment_status",
+        "sap_absolute_entry", "sap_error_message",
+        "uploaded_at", "uploaded_by"
+    ]
+    can_delete = True
 
 
 @admin.register(GRPOPosting)
@@ -40,7 +51,7 @@ class GRPOPostingAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at"
     ]
-    inlines = [GRPOLinePostingInline]
+    inlines = [GRPOLinePostingInline, GRPOAttachmentInline]
 
     def get_entry_no(self, obj):
         return obj.vehicle_entry.entry_no

@@ -4,6 +4,7 @@ from .hana.po_reader import HanaPOReader
 from .hana.warehouse_reader import HanaWarehouseReader
 from .hana.vendor_reader import HanaVendorReader
 from .service_layer.grpo_writer import GRPOWriter
+from .service_layer.attachment_writer import AttachmentWriter
 from .dtos import PODTO, WarehouseDTO, VendorDTO
 
 
@@ -32,3 +33,13 @@ class SAPClient:
     def create_grpo(self, payload: dict):
         self.grpo_writer = GRPOWriter(self.context)
         return self.grpo_writer.create(payload)
+
+    def upload_attachment(self, file_path: str, filename: str) -> dict:
+        """Upload a file to SAP Attachments2"""
+        writer = AttachmentWriter(self.context)
+        return writer.upload(file_path, filename)
+
+    def link_attachment_to_grpo(self, doc_entry: int, absolute_entry: int) -> dict:
+        """Link an attachment to a GRPO document"""
+        writer = AttachmentWriter(self.context)
+        return writer.link_to_document(doc_entry, absolute_entry)

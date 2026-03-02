@@ -8,7 +8,10 @@ def create_notification_groups(apps, schema_editor):
     Permission = apps.get_model("auth", "Permission")
     ContentType = apps.get_model("contenttypes", "ContentType")
 
-    ct = ContentType.objects.get(app_label="notifications", model="notification")
+    try:
+        ct = ContentType.objects.get(app_label="notifications", model="notification")
+    except ContentType.DoesNotExist:
+        return
 
     group, _ = Group.objects.get_or_create(name="Notification Sender")
 

@@ -1,0 +1,169 @@
+import logging
+import requests
+
+from ..exceptions import SAPConnectionError, SAPDataError, SAPValidationError
+from .auth import ServiceLayerSession
+
+logger = logging.getLogger(__name__)
+
+
+class AttachmentWriter:
+    """Attachment Writer for SAP Service Layer Attachments2 endpoint"""
+
+    def __init__(self, context):
+        self.context = context
+        self.sl_config = context.service_layer
+
+    def _get_session_cookies(self):
+        """Get authenticated session cookies from Service Layer"""
+        try:
+            session = ServiceLayerSession(self.sl_config)
+            return session.login()
+        except requests.exceptions.ConnectionError as e:
+            logger.error(f"Failed to connect to SAP Service Layer: {e}")
+            raise SAPConnectionError("Unable to connect to SAP Service Layer")
+        except requests.exceptions.Timeout as e:
+            logger.error(f"SAP Service Layer connection timeout: {e}")
+            raise SAPConnectionError("SAP Service Layer connection timeout")
+        except requests.exceptions.HTTPError as e:
+            logger.error(f"SAP Service Layer authentication failed: {e}")
+            raise SAPConnectionError("SAP Service Layer authentication failed")
+
+    def upload(self, file_path: str, filename: str) -> dict:
+        """
+        Upload a file to SAP Attachments2 endpoint.
+
+        Args:
+            file_path: Absolute path to the file on disk (from FileField.path)
+            filename: Original filename to use in the upload
+
+        Returns:
+            dict: SAP response containing AbsoluteEntry
+        """
+        cookies = self._get_session_cookies()
+        url = f"{self.sl_config['base_url']}/b1s/v2/Attachments2"
+
+        try:
+            with open(file_path, "rb") as f:
+                files = {
+                    "files": (filename, f)
+                }
+                response = requests.post(
+                    url,
+                    files=files,
+                    cookies=cookies,
+                    timeout=60,
+                    verify=False
+                )
+
+            if response.status_code == 201:
+                result = response.json()
+                logger.info(
+                    f"Attachment uploaded to SAP. "
+                    f"AbsoluteEntry: {result.get('AbsoluteEntry')}"
+                )
+                return result
+
+            if response.status_code == 400:
+                error_msg = self._extract_error_message(response)
+                logger.error(f"SAP validation error uploading attachment: {error_msg}")
+                raise SAPValidationError(error_msg)
+
+            if response.status_code in (401, 403):
+                logger.error("SAP authentication/authorization error during attachment upload")
+                raise SAPConnectionError("SAP authentication failed")
+
+            error_msg = self._extract_error_message(response)
+            logger.error(f"SAP error uploading attachment: {error_msg}")
+            raise SAPDataError(f"Failed to upload attachment: {error_msg}")
+
+        except requests.exceptions.ConnectionError as e:
+            logger.error(f"Connection error uploading attachment: {e}")
+            raise SAPConnectionError("Unable to connect to SAP Service Layer")
+        except requests.exceptions.Timeout as e:
+            logger.error(f"Timeout uploading attachment: {e}")
+            raise SAPConnectionError("SAP Service Layer request timeout")
+        except (SAPConnectionError, SAPDataError, SAPValidationError):
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error uploading attachment: {e}")
+            raise SAPDataError(f"Unexpected error: {str(e)}")
+
+    def link_to_document(self, doc_entry: int, absolute_entry: int) -> dict:
+        """
+        Link an uploaded attachment to a GRPO document (PurchaseDeliveryNotes)
+        by PATCHing the AttachmentEntry field.
+
+        Args:
+            doc_entry: The GRPO's DocEntry in SAP
+            absolute_entry: The AbsoluteEntry from Attachments2 upload
+
+        Returns:
+            dict: Updated document response from SAP
+        """
+        cookies = self._get_session_cookies()
+        url = (
+            f"{self.sl_config['base_url']}/b1s/v2"
+            f"/PurchaseDeliveryNotes({doc_entry})"
+        )
+
+        payload = {
+            "AttachmentEntry": absolute_entry
+        }
+
+        headers = {
+            "Content-Type": "application/json",
+        }
+
+        try:
+            response = requests.patch(
+                url,
+                json=payload,
+                cookies=cookies,
+                headers=headers,
+                timeout=30,
+                verify=False
+            )
+
+            if response.status_code in (200, 204):
+                logger.info(
+                    f"Attachment {absolute_entry} linked to GRPO DocEntry {doc_entry}"
+                )
+                if response.status_code == 204:
+                    return {"DocEntry": doc_entry, "AttachmentEntry": absolute_entry}
+                return response.json()
+
+            if response.status_code == 400:
+                error_msg = self._extract_error_message(response)
+                logger.error(f"SAP validation error linking attachment: {error_msg}")
+                raise SAPValidationError(error_msg)
+
+            if response.status_code in (401, 403):
+                logger.error("SAP auth error linking attachment")
+                raise SAPConnectionError("SAP authentication failed")
+
+            error_msg = self._extract_error_message(response)
+            logger.error(f"SAP error linking attachment: {error_msg}")
+            raise SAPDataError(f"Failed to link attachment: {error_msg}")
+
+        except requests.exceptions.ConnectionError as e:
+            logger.error(f"Connection error linking attachment: {e}")
+            raise SAPConnectionError("Unable to connect to SAP Service Layer")
+        except requests.exceptions.Timeout as e:
+            logger.error(f"Timeout linking attachment: {e}")
+            raise SAPConnectionError("SAP Service Layer request timeout")
+        except (SAPConnectionError, SAPDataError, SAPValidationError):
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error linking attachment: {e}")
+            raise SAPDataError(f"Unexpected error: {str(e)}")
+
+    def _extract_error_message(self, response) -> str:
+        """Extract error message from SAP response"""
+        try:
+            error_data = response.json()
+            if "error" in error_data:
+                return error_data["error"].get("message", {}).get("value", str(error_data))
+            return str(error_data)
+        except Exception:
+            return response.text or f"HTTP {response.status_code}"

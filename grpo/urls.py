@@ -4,7 +4,10 @@ from .views import (
     GRPOPreviewAPI,
     PostGRPOAPI,
     GRPOPostingHistoryAPI,
-    GRPOPostingDetailAPI
+    GRPOPostingDetailAPI,
+    GRPOAttachmentListCreateAPI,
+    GRPOAttachmentDeleteAPI,
+    GRPOAttachmentRetryAPI,
 )
 
 urlpatterns = [
@@ -20,6 +23,23 @@ urlpatterns = [
     # GRPO posting history
     path("history/", GRPOPostingHistoryAPI.as_view(), name="grpo-history"),
 
-    # GRPO posting detail
+    # GRPO attachment endpoints
+    path(
+        "<int:posting_id>/attachments/",
+        GRPOAttachmentListCreateAPI.as_view(),
+        name="grpo-attachment-list-create"
+    ),
+    path(
+        "<int:posting_id>/attachments/<int:attachment_id>/",
+        GRPOAttachmentDeleteAPI.as_view(),
+        name="grpo-attachment-delete"
+    ),
+    path(
+        "<int:posting_id>/attachments/<int:attachment_id>/retry/",
+        GRPOAttachmentRetryAPI.as_view(),
+        name="grpo-attachment-retry"
+    ),
+
+    # GRPO posting detail (keep last - catch-all pattern)
     path("<int:posting_id>/", GRPOPostingDetailAPI.as_view(), name="grpo-detail"),
 ]
