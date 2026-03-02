@@ -287,6 +287,7 @@ class GRPOService:
             variety = item_input.get("variety")
             if variety:
                 line_data["U_Variety"] = variety
+                line_data["U_SchemeAgst"] = variety
 
             document_lines.append(line_data)
             grpo_lines_data.append({
