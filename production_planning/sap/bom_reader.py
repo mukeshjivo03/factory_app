@@ -58,30 +58,30 @@ class HanaBOMReader:
 
             # ------------------------------------------------------------------
             # Fetch BOM components from OITT → ITT1 → OITM
-            # We do NOT filter by TreeType so it works across all SAP B1 versions.
+            # ITT1 actual columns: Father (component code), Quantity, Uom, ItemName
             # ------------------------------------------------------------------
             query = f"""
                 SELECT
-                    T1."ItemCode"               AS component_code,
-                    T2."ItemName"               AS component_name,
-                    T1."Qty"                    AS qty_per_unit,
-                    IFNULL(T2."InvntryUom", '') AS uom,
-                    IFNULL(T2."OnHand", 0)      AS on_hand
+                    T1."Father"                             AS component_code,
+                    T1."ItemName"                           AS component_name,
+                    T1."Quantity"                           AS qty_per_unit,
+                    IFNULL(T1."Uom", IFNULL(T2."InvntryUom", '')) AS uom,
+                    IFNULL(T2."OnHand", 0)                  AS on_hand
                 FROM "{schema}"."OITT" T0
                 INNER JOIN "{schema}"."ITT1" T1
                     ON T0."Code" = T1."Code"
                 INNER JOIN "{schema}"."OITM" T2
-                    ON T1."ItemCode" = T2."ItemCode"
+                    ON T1."Father" = T2."ItemCode"
                 WHERE T0."Code" = ?
-                ORDER BY T1."ItemCode"
+                ORDER BY T1."VisOrder", T1."Father"
             """
             cursor.execute(query, [item_code])
             rows = cursor.fetchall()
 
             components = []
             for r in rows:
-                comp_code   = r[0]
-                comp_name   = r[1]
+                comp_code    = r[0]
+                comp_name    = r[1]
                 qty_per_unit = float(r[2])
                 uom          = r[3] or ''
                 on_hand      = float(r[4])
