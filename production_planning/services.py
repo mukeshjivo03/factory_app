@@ -215,9 +215,6 @@ class ProductionPlanningService:
         if plan.warehouse_code:
             payload["Warehouse"] = plan.warehouse_code
 
-        if plan.branch_id:
-            payload["BranchID"] = plan.branch_id
-
         # BOM lines
         materials = list(plan.materials.all())
         if materials:
