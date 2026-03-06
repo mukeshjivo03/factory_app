@@ -60,6 +60,15 @@ class ProductionPlanningService:
         reader = HanaWarehouseReader(self.context)
         return reader.get_active_warehouses()
 
+    def get_bom_with_requirements(self, item_code: str, planned_qty: float) -> dict:
+        """
+        Fetch BOM components for item_code from SAP HANA (OITT/ITT1),
+        scale quantities to planned_qty, and include stock/shortage data.
+        """
+        from .sap.bom_reader import HanaBOMReader
+        reader = HanaBOMReader(self.context)
+        return reader.get_bom(item_code=item_code, planned_qty=planned_qty)
+
     # ------------------------------------------------------------------
     # Plan CRUD (local DB)
     # ------------------------------------------------------------------

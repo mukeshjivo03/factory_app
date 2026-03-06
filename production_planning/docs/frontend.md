@@ -13,7 +13,7 @@
 2. [Enum / Constant Values](#2-enum--constant-values)
 3. [Plan Lifecycle (State Machine)](#3-plan-lifecycle-state-machine)
 4. [Error Response Format](#4-error-response-format)
-5. [Dropdown APIs (form field data)](#5-dropdown-apis)
+5. [Dropdown APIs (form field data)](#5-dropdown-apis) — Items, UoM, Warehouses, **BOM Auto-Detect**
 6. [Production Plan — CRUD](#6-production-plan--crud)
 7. [Post Plan to SAP](#7-post-plan-to-sap)
 8. [Close Plan](#8-close-plan)
@@ -244,6 +244,96 @@ GET /api/v1/production-planning/dropdown/warehouses/
 Use `warehouse_code` as the value and `warehouse_name` as the label.
 
 **Status Codes:** Same as Items.
+
+---
+
+### 5.4 BOM Auto-Detect (with Quantity & Shortage)
+
+Call this **after the user selects a finished-good item and enters planned_qty**.
+It fetches the production BOM from SAP (OITT/ITT1), scales component quantities, and compares against live stock to show shortages.
+
+```
+GET /api/v1/production-planning/dropdown/bom/
+    ?item_code=FG-OIL-1L
+    &planned_qty=500
+```
+
+**Query Params**
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| `item_code` | string | **Yes** | The finished-good item code selected by the user |
+| `planned_qty` | number | No | Planned production quantity (default: 1) |
+
+**Response 200**
+```json
+{
+  "item_code": "FG-OIL-1L",
+  "item_name": "Jivo Sunflower Oil 1L",
+  "planned_qty": 500.0,
+  "bom_found": true,
+  "has_shortage": true,
+  "components": [
+    {
+      "component_code": "RM-OIL-CRUDE",
+      "component_name": "Crude Sunflower Oil",
+      "uom": "LTR",
+      "qty_per_unit": 1.05,
+      "required_qty": 525.0,
+      "available_stock": 400.0,
+      "shortage_qty": 125.0,
+      "has_shortage": true
+    },
+    {
+      "component_code": "RM-BOTTLE-1L",
+      "component_name": "PET Bottle 1L",
+      "uom": "Nos",
+      "qty_per_unit": 1.0,
+      "required_qty": 500.0,
+      "available_stock": 600.0,
+      "shortage_qty": 0.0,
+      "has_shortage": false
+    }
+  ]
+}
+```
+
+**Response field meanings**
+
+| Field | Description |
+|-------|-------------|
+| `bom_found` | `false` if no production BOM exists for this item in SAP |
+| `has_shortage` | `true` if ANY component has `shortage_qty > 0` |
+| `qty_per_unit` | BOM quantity per 1 unit of finished good |
+| `required_qty` | `qty_per_unit × planned_qty` — what you need to produce |
+| `available_stock` | Current stock in SAP (across all warehouses) |
+| `shortage_qty` | `max(0, required_qty − available_stock)` |
+| `has_shortage` | Per-component flag for easy row highlighting |
+
+**UI Logic**
+
+```
+1. User selects item from Items Dropdown (type=finished)
+2. User enters planned_qty
+3. On item select OR qty change → call GET /dropdown/bom/?item_code=X&planned_qty=N
+4. If bom_found = false → show warning "No BOM found for this item in SAP"
+5. Auto-populate the Materials table with returned components
+6. Highlight rows where has_shortage = true (red background / warning icon)
+7. Show a banner if top-level has_shortage = true:
+   "⚠ Some materials are short. Review before posting to SAP."
+8. User can still adjust quantities manually before saving
+```
+
+**Status Codes**
+
+| Code | Meaning |
+|------|---------|
+| 200 | BOM returned (check `bom_found` — may be empty if no BOM in SAP) |
+| 400 | Missing or invalid `item_code` / `planned_qty` |
+| 401 | Not authenticated |
+| 403 | Missing Company-Code header |
+| 502 | SAP HANA query error |
+| 503 | SAP HANA connection unavailable |
 
 ---
 

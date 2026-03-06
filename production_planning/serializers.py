@@ -25,6 +25,26 @@ class WarehouseDropdownSerializer(serializers.Serializer):
     warehouse_name = serializers.CharField()
 
 
+class BOMComponentSerializer(serializers.Serializer):
+    component_code  = serializers.CharField()
+    component_name  = serializers.CharField()
+    uom             = serializers.CharField()
+    qty_per_unit    = serializers.FloatField()
+    required_qty    = serializers.FloatField()
+    available_stock = serializers.FloatField()
+    shortage_qty    = serializers.FloatField()
+    has_shortage    = serializers.BooleanField()
+
+
+class BOMResponseSerializer(serializers.Serializer):
+    item_code    = serializers.CharField()
+    item_name    = serializers.CharField()
+    planned_qty  = serializers.FloatField()
+    bom_found    = serializers.BooleanField()
+    has_shortage = serializers.BooleanField()
+    components   = BOMComponentSerializer(many=True)
+
+
 # ---------------------------------------------------------------------------
 # Material requirement
 # ---------------------------------------------------------------------------

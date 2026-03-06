@@ -13,6 +13,7 @@ from .serializers import (
     ItemDropdownSerializer,
     UoMDropdownSerializer,
     WarehouseDropdownSerializer,
+    BOMResponseSerializer,
     # Plan CRUD
     ProductionPlanCreateSerializer,
     ProductionPlanUpdateSerializer,
@@ -139,6 +140,53 @@ class WarehouseDropdownAPI(APIView):
             [w.__dict__ for w in warehouses], many=True
         )
         return Response(serializer.data)
+
+
+class BOMDropdownAPI(APIView):
+    """
+    Fetch production BOM for a finished-good item, scaled to planned_qty.
+    Returns components with required qty, available stock, and shortage.
+
+    GET /api/v1/production-planning/dropdown/bom/
+        ?item_code=FG-OIL-1L        (required)
+        &planned_qty=500            (optional, default 1)
+    """
+    permission_classes = [IsAuthenticated, HasCompanyContext, CanViewProductionPlan]
+
+    def get(self, request):
+        item_code = request.GET.get('item_code', '').strip()
+        if not item_code:
+            return Response(
+                {"detail": "item_code query parameter is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            planned_qty = float(request.GET.get('planned_qty', 1))
+            if planned_qty <= 0:
+                raise ValueError
+        except (ValueError, TypeError):
+            return Response(
+                {"detail": "planned_qty must be a positive number."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        company_code = request.company.company.code
+        service = ProductionPlanningService(company_code)
+
+        try:
+            bom_data = service.get_bom_with_requirements(
+                item_code=item_code, planned_qty=planned_qty
+            )
+        except SAPConnectionError:
+            return Response(
+                {"detail": "SAP system unavailable. Cannot load BOM."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        except SAPDataError as e:
+            return Response({"detail": f"SAP error: {e}"}, status=status.HTTP_502_BAD_GATEWAY)
+
+        return Response(BOMResponseSerializer(bom_data).data)
 
 
 # ===========================================================================

@@ -4,6 +4,7 @@ from .views import (
     ItemDropdownAPI,
     UoMDropdownAPI,
     WarehouseDropdownAPI,
+    BOMDropdownAPI,
     # Plan CRUD + actions
     ProductionPlanListCreateAPI,
     ProductionPlanDetailAPI,
@@ -29,6 +30,7 @@ urlpatterns = [
     path('dropdown/items/', ItemDropdownAPI.as_view(), name='pp-dropdown-items'),
     path('dropdown/uom/', UoMDropdownAPI.as_view(), name='pp-dropdown-uom'),
     path('dropdown/warehouses/', WarehouseDropdownAPI.as_view(), name='pp-dropdown-warehouses'),
+    path('dropdown/bom/', BOMDropdownAPI.as_view(), name='pp-dropdown-bom'),
 
     # ------------------------------------------------------------------
     # Summary + cross-plan daily entries
