@@ -137,10 +137,10 @@ class HanaItemReader:
 
             query = f"""
                 SELECT
-                    "Code" AS uom_code,
-                    "Name" AS uom_name
+                    "UomCode" AS uom_code,
+                    "UomName" AS uom_name
                 FROM "{schema}"."OUOM"
-                ORDER BY "Code"
+                ORDER BY "UomCode"
             """
 
             cursor.execute(query)
