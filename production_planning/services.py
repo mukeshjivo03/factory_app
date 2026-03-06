@@ -203,29 +203,25 @@ class ProductionPlanningService:
             )
 
         # Build SAP payload
+        # SAP B1 Service Layer field names for ProductionOrders entity.
+        # NOTE: Do NOT send ProductionOrderLines — SAP auto-creates them from
+        # the item's production BOM (OITT/ITT1) when ItemNo is provided.
+        # DueDate must be within the company's allowed posting date range.
         payload = {
             "ItemNo": plan.item_code,
             "PlannedQuantity": float(plan.planned_qty),
-            "PlannedStartDate": plan.target_start_date.strftime("%Y-%m-%d"),
             "DueDate": plan.due_date.strftime("%Y-%m-%d"),
-            "Status": "R",  # Released — ready for production
-            "Remarks": plan.remarks or "",
+            "ProductionOrderStatus": "boposPlanned",
         }
+
+        if plan.target_start_date:
+            payload["StartDate"] = plan.target_start_date.strftime("%Y-%m-%d")
+
+        if plan.remarks:
+            payload["Remarks"] = plan.remarks
 
         if plan.warehouse_code:
             payload["Warehouse"] = plan.warehouse_code
-
-        # BOM lines
-        materials = list(plan.materials.all())
-        if materials:
-            payload["ProductionOrderLines"] = [
-                {
-                    "ItemNo": m.component_code,
-                    "PlannedQuantity": float(m.required_qty),
-                    **({"Warehouse": m.warehouse_code} if m.warehouse_code else {}),
-                }
-                for m in materials
-            ]
 
         logger.info(f"Posting production plan {plan_id} to SAP: {payload}")
 

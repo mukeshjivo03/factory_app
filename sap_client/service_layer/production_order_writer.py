@@ -47,14 +47,13 @@ class ProductionOrderWriter:
         Create a Production Order in SAP B1.
 
         Expected payload keys:
-            ItemNo          (str)   Finished product ItemCode
-            PlannedQuantity (float) Total planned quantity
-            PlannedStartDate(str)   YYYY-MM-DD
-            DueDate         (str)   YYYY-MM-DD
-            Warehouse       (str)   Production warehouse code (optional)
-            BranchID        (int)   SAP BPLId (optional)
-            Remarks         (str)   Remarks (optional)
-            Status          (str)   'P'=Planned, 'R'=Released (default 'R')
+            ItemNo                (str)   Finished product ItemCode
+            PlannedQuantity       (float) Total planned quantity
+            DueDate               (str)   YYYY-MM-DD
+            StartDate             (str)   YYYY-MM-DD (optional)
+            Warehouse             (str)   Production warehouse code (optional)
+            Remarks               (str)   Remarks (optional)
+            ProductionOrderStatus (str)   'boposPlanned' | 'boposReleased' (optional)
             ProductionOrderLines (list) BOM component lines (optional):
                 ItemNo          (str)
                 PlannedQuantity (float)
@@ -79,9 +78,15 @@ class ProductionOrderWriter:
 
             if response.status_code == 201:
                 data = response.json()
+                # SAP B1 Service Layer uses AbsoluteEntry / DocumentNumber
+                doc_entry = data.get('AbsoluteEntry')
+                doc_num   = data.get('DocumentNumber')
+                # Normalise to DocEntry / DocNum for consistent consumption
+                data['DocEntry'] = doc_entry
+                data['DocNum']   = doc_num
                 logger.info(
-                    f"Production order created in SAP: DocNum={data.get('DocNum')}, "
-                    f"DocEntry={data.get('DocEntry')}"
+                    f"Production order created in SAP: DocNum={doc_num}, "
+                    f"DocEntry={doc_entry}"
                 )
                 return data
 
