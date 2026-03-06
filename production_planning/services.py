@@ -174,7 +174,6 @@ class ProductionPlanningService:
     # Post to SAP
     # ------------------------------------------------------------------
 
-    @transaction.atomic
     def post_to_sap(self, plan_id: int, user) -> ProductionPlan:
         """
         Post a DRAFT plan to SAP B1 as a Production Order (OWOR).

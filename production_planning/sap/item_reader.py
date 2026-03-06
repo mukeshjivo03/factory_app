@@ -79,13 +79,14 @@ class HanaItemReader:
 
             query = f"""
                 SELECT
-                    T0."ItemCode"               AS item_code,
-                    T0."ItemName"               AS item_name,
-                    IFNULL(T0."InvntryUom", '') AS uom,
-                    IFNULL(T0."ItmsGrpNam", '') AS item_group,
-                    CASE WHEN T0."MakeItem" = 'Y' THEN 'Y' ELSE 'N' END AS make_item,
-                    CASE WHEN T0."PrchseItem" = 'Y' THEN 'Y' ELSE 'N' END AS purchase_item
+                    T0."ItemCode"                   AS item_code,
+                    T0."ItemName"                   AS item_name,
+                    IFNULL(T0."InvntryUom", '')     AS uom,
+                    IFNULL(T1."ItmsGrpNam", '')     AS item_group,
+                    CASE WHEN T0."MakeItem"    = 'Y' THEN 'Y' ELSE 'N' END AS make_item,
+                    CASE WHEN T0."PrchseItem"  = 'Y' THEN 'Y' ELSE 'N' END AS purchase_item
                 FROM "{schema}"."OITM" T0
+                LEFT JOIN "{schema}"."OITB" T1 ON T0."ItmsGrpCod" = T1."ItmsGrpCod"
                 WHERE {where_clause}
                 ORDER BY T0."ItemCode"
                 LIMIT 200
