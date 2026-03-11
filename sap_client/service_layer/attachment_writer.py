@@ -146,6 +146,8 @@ class AttachmentWriter:
                 "FileName": name_without_ext,
                 "FileExtension": file_ext,
                 "Override": "tYES",
+                "U_CHK2": "tYES",
+                "U_CHK": "tYES"
             }]
         }
         headers = {"Content-Type": "application/json"}
