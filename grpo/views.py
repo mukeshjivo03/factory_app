@@ -245,7 +245,7 @@ class GRPOPostingDetailAPI(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        serializer = GRPOPostingSerializer(posting)
+        serializer = GRPOPostingSerializer(posting,context={"request": request})
         return Response(serializer.data)
 
 
