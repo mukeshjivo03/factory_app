@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'notifications',
     'production_planning',
     'production_execution',
+    'sap_plan_dashboard',
 ]
 
 MIDDLEWARE = [
