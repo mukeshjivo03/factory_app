@@ -5,6 +5,9 @@ from .models import (
     ProductionMaterialUsage, MachineRuntime, ProductionManpower,
     LineClearance, LineClearanceItem,
     MachineChecklistEntry, WasteLog,
+    ResourceElectricity, ResourceWater, ResourceGas, ResourceCompressedAir,
+    ResourceLabour, ResourceMachineCost, ResourceOverhead,
+    ProductionRunCost, InProcessQCCheck, FinalQCCheck,
 )
 
 
@@ -377,3 +380,185 @@ class WasteLogCreateSerializer(serializers.Serializer):
 class WasteApprovalSerializer(serializers.Serializer):
     sign = serializers.CharField(max_length=200)
     remarks = serializers.CharField(required=False, allow_blank=True, default='')
+
+
+# ---------------------------------------------------------------------------
+# Resource Tracking Serializers
+# ---------------------------------------------------------------------------
+
+class ResourceElectricitySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ResourceElectricity
+        fields = ['id', 'description', 'units_consumed', 'rate_per_unit', 'total_cost', 'created_by', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'total_cost', 'created_at', 'updated_at']
+
+
+class ResourceElectricityCreateSerializer(serializers.Serializer):
+    description = serializers.CharField(max_length=200, required=False, default='')
+    units_consumed = serializers.DecimalField(max_digits=12, decimal_places=3)
+    rate_per_unit = serializers.DecimalField(max_digits=12, decimal_places=4)
+
+
+class ResourceWaterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ResourceWater
+        fields = ['id', 'description', 'volume_consumed', 'rate_per_unit', 'total_cost', 'created_by', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'total_cost', 'created_at', 'updated_at']
+
+
+class ResourceWaterCreateSerializer(serializers.Serializer):
+    description = serializers.CharField(max_length=200, required=False, default='')
+    volume_consumed = serializers.DecimalField(max_digits=12, decimal_places=3)
+    rate_per_unit = serializers.DecimalField(max_digits=12, decimal_places=4)
+
+
+class ResourceGasSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ResourceGas
+        fields = ['id', 'description', 'qty_consumed', 'rate_per_unit', 'total_cost', 'created_by', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'total_cost', 'created_at', 'updated_at']
+
+
+class ResourceGasCreateSerializer(serializers.Serializer):
+    description = serializers.CharField(max_length=200, required=False, default='')
+    qty_consumed = serializers.DecimalField(max_digits=12, decimal_places=3)
+    rate_per_unit = serializers.DecimalField(max_digits=12, decimal_places=4)
+
+
+class ResourceCompressedAirSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ResourceCompressedAir
+        fields = ['id', 'description', 'units_consumed', 'rate_per_unit', 'total_cost', 'created_by', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'total_cost', 'created_at', 'updated_at']
+
+
+class ResourceCompressedAirCreateSerializer(serializers.Serializer):
+    description = serializers.CharField(max_length=200, required=False, default='')
+    units_consumed = serializers.DecimalField(max_digits=12, decimal_places=3)
+    rate_per_unit = serializers.DecimalField(max_digits=12, decimal_places=4)
+
+
+class ResourceLabourSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ResourceLabour
+        fields = ['id', 'worker_name', 'hours_worked', 'rate_per_hour', 'total_cost', 'created_by', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'total_cost', 'created_at', 'updated_at']
+
+
+class ResourceLabourCreateSerializer(serializers.Serializer):
+    worker_name = serializers.CharField(max_length=200)
+    hours_worked = serializers.DecimalField(max_digits=8, decimal_places=2)
+    rate_per_hour = serializers.DecimalField(max_digits=12, decimal_places=4)
+
+
+class ResourceMachineCostSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ResourceMachineCost
+        fields = ['id', 'machine_name', 'hours_used', 'rate_per_hour', 'total_cost', 'created_by', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'total_cost', 'created_at', 'updated_at']
+
+
+class ResourceMachineCostCreateSerializer(serializers.Serializer):
+    machine_name = serializers.CharField(max_length=200)
+    hours_used = serializers.DecimalField(max_digits=8, decimal_places=2)
+    rate_per_hour = serializers.DecimalField(max_digits=12, decimal_places=4)
+
+
+class ResourceOverheadSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ResourceOverhead
+        fields = ['id', 'expense_name', 'amount', 'created_by', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class ResourceOverheadCreateSerializer(serializers.Serializer):
+    expense_name = serializers.CharField(max_length=200)
+    amount = serializers.DecimalField(max_digits=15, decimal_places=2)
+
+
+# ---------------------------------------------------------------------------
+# Cost Summary Serializer
+# ---------------------------------------------------------------------------
+
+class ProductionRunCostSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductionRunCost
+        fields = [
+            'id', 'raw_material_cost', 'labour_cost', 'machine_cost',
+            'electricity_cost', 'water_cost', 'gas_cost', 'compressed_air_cost',
+            'overhead_cost', 'total_cost', 'produced_qty', 'per_unit_cost', 'calculated_at'
+        ]
+        read_only_fields = [
+            'id', 'raw_material_cost', 'labour_cost', 'machine_cost',
+            'electricity_cost', 'water_cost', 'gas_cost', 'compressed_air_cost',
+            'overhead_cost', 'total_cost', 'produced_qty', 'per_unit_cost', 'calculated_at'
+        ]
+
+
+# ---------------------------------------------------------------------------
+# QC Check Serializers
+# ---------------------------------------------------------------------------
+
+class InProcessQCCheckSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InProcessQCCheck
+        fields = [
+            'id', 'checked_at', 'parameter', 'acceptable_min', 'acceptable_max',
+            'actual_value', 'result', 'remarks', 'checked_by', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class InProcessQCCheckCreateSerializer(serializers.Serializer):
+    checked_at = serializers.DateTimeField()
+    parameter = serializers.CharField(max_length=200)
+    acceptable_min = serializers.DecimalField(max_digits=10, decimal_places=3, required=False, allow_null=True)
+    acceptable_max = serializers.DecimalField(max_digits=10, decimal_places=3, required=False, allow_null=True)
+    actual_value = serializers.DecimalField(max_digits=10, decimal_places=3, required=False, allow_null=True)
+    result = serializers.ChoiceField(choices=['PASS', 'FAIL', 'NA'], default='NA')
+    remarks = serializers.CharField(required=False, default='', allow_blank=True)
+
+
+class FinalQCCheckSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FinalQCCheck
+        fields = [
+            'id', 'checked_at', 'overall_result', 'parameters',
+            'remarks', 'checked_by', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class FinalQCCheckCreateSerializer(serializers.Serializer):
+    checked_at = serializers.DateTimeField()
+    overall_result = serializers.ChoiceField(choices=['PASS', 'FAIL', 'CONDITIONAL'])
+    parameters = serializers.ListField(child=serializers.DictField(), default=list)
+    remarks = serializers.CharField(required=False, default='', allow_blank=True)
+
+
+# ---------------------------------------------------------------------------
+# SAP Order Serializers (plain, not model-based)
+# ---------------------------------------------------------------------------
+
+class SAPProductionOrderSerializer(serializers.Serializer):
+    DocEntry = serializers.IntegerField()
+    DocNum = serializers.IntegerField()
+    ItemCode = serializers.CharField()
+    ItemName = serializers.CharField()
+    PlannedQty = serializers.FloatField()
+    CmpltQty = serializers.FloatField()
+    RjctQty = serializers.FloatField()
+    RemainingQty = serializers.FloatField()
+    StartDate = serializers.DateField(allow_null=True)
+    DueDate = serializers.DateField(allow_null=True)
+    Warehouse = serializers.CharField(allow_null=True, allow_blank=True)
+    Status = serializers.CharField()
+
+
+class SAPOrderComponentSerializer(serializers.Serializer):
+    ItemCode = serializers.CharField()
+    ItemName = serializers.CharField()
+    PlannedQty = serializers.FloatField()
+    IssuedQty = serializers.FloatField()
+    Warehouse = serializers.CharField(allow_null=True, allow_blank=True)
+    UomCode = serializers.CharField(allow_null=True, allow_blank=True)

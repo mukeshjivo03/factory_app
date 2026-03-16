@@ -29,6 +29,22 @@ from .views import (
     # Reports
     DailyProductionReportAPI, YieldReportAPI,
     LineClearanceReportAPI, AnalyticsAPI,
+    # SAP Orders
+    SAPProductionOrderListAPI, SAPProductionOrderDetailAPI,
+    # Resource Tracking
+    ResourceElectricityListCreateAPI, ResourceElectricityDetailAPI,
+    ResourceWaterListCreateAPI, ResourceWaterDetailAPI,
+    ResourceGasListCreateAPI, ResourceGasDetailAPI,
+    ResourceCompressedAirListCreateAPI, ResourceCompressedAirDetailAPI,
+    ResourceLabourListCreateAPI, ResourceLabourDetailAPI,
+    ResourceMachineCostListCreateAPI, ResourceMachineCostDetailAPI,
+    ResourceOverheadListCreateAPI, ResourceOverheadDetailAPI,
+    # Cost
+    RunCostSummaryAPI, CostAnalyticsAPI,
+    # QC
+    InProcessQCListCreateAPI, InProcessQCDetailAPI, FinalQCCheckAPI,
+    # Extended Analytics
+    OEEAnalyticsAPI, DowntimeAnalyticsAPI, WasteAnalyticsAPI,
 )
 
 urlpatterns = [
@@ -119,4 +135,72 @@ urlpatterns = [
     path('reports/yield/<int:run_id>/', YieldReportAPI.as_view(), name='pe-report-yield'),
     path('reports/line-clearance/', LineClearanceReportAPI.as_view(), name='pe-report-clearance'),
     path('reports/analytics/', AnalyticsAPI.as_view(), name='pe-report-analytics'),
+
+    # ------------------------------------------------------------------
+    # SAP Orders (proxy)
+    # ------------------------------------------------------------------
+    path('sap/orders/', SAPProductionOrderListAPI.as_view(), name='pe-sap-orders'),
+    path('sap/orders/<int:doc_entry>/', SAPProductionOrderDetailAPI.as_view(), name='pe-sap-order-detail'),
+
+    # ------------------------------------------------------------------
+    # Resource Tracking — Electricity
+    # ------------------------------------------------------------------
+    path('runs/<int:run_id>/resources/electricity/', ResourceElectricityListCreateAPI.as_view(), name='pe-resource-electricity-list'),
+    path('runs/<int:run_id>/resources/electricity/<int:entry_id>/', ResourceElectricityDetailAPI.as_view(), name='pe-resource-electricity-detail'),
+
+    # ------------------------------------------------------------------
+    # Resource Tracking — Water
+    # ------------------------------------------------------------------
+    path('runs/<int:run_id>/resources/water/', ResourceWaterListCreateAPI.as_view(), name='pe-resource-water-list'),
+    path('runs/<int:run_id>/resources/water/<int:entry_id>/', ResourceWaterDetailAPI.as_view(), name='pe-resource-water-detail'),
+
+    # ------------------------------------------------------------------
+    # Resource Tracking — Gas
+    # ------------------------------------------------------------------
+    path('runs/<int:run_id>/resources/gas/', ResourceGasListCreateAPI.as_view(), name='pe-resource-gas-list'),
+    path('runs/<int:run_id>/resources/gas/<int:entry_id>/', ResourceGasDetailAPI.as_view(), name='pe-resource-gas-detail'),
+
+    # ------------------------------------------------------------------
+    # Resource Tracking — Compressed Air
+    # ------------------------------------------------------------------
+    path('runs/<int:run_id>/resources/compressed-air/', ResourceCompressedAirListCreateAPI.as_view(), name='pe-resource-air-list'),
+    path('runs/<int:run_id>/resources/compressed-air/<int:entry_id>/', ResourceCompressedAirDetailAPI.as_view(), name='pe-resource-air-detail'),
+
+    # ------------------------------------------------------------------
+    # Resource Tracking — Labour
+    # ------------------------------------------------------------------
+    path('runs/<int:run_id>/resources/labour/', ResourceLabourListCreateAPI.as_view(), name='pe-resource-labour-list'),
+    path('runs/<int:run_id>/resources/labour/<int:entry_id>/', ResourceLabourDetailAPI.as_view(), name='pe-resource-labour-detail'),
+
+    # ------------------------------------------------------------------
+    # Resource Tracking — Machine Costs
+    # ------------------------------------------------------------------
+    path('runs/<int:run_id>/resources/machine-costs/', ResourceMachineCostListCreateAPI.as_view(), name='pe-resource-machine-list'),
+    path('runs/<int:run_id>/resources/machine-costs/<int:entry_id>/', ResourceMachineCostDetailAPI.as_view(), name='pe-resource-machine-detail'),
+
+    # ------------------------------------------------------------------
+    # Resource Tracking — Overhead
+    # ------------------------------------------------------------------
+    path('runs/<int:run_id>/resources/overhead/', ResourceOverheadListCreateAPI.as_view(), name='pe-resource-overhead-list'),
+    path('runs/<int:run_id>/resources/overhead/<int:entry_id>/', ResourceOverheadDetailAPI.as_view(), name='pe-resource-overhead-detail'),
+
+    # ------------------------------------------------------------------
+    # Cost Summary
+    # ------------------------------------------------------------------
+    path('runs/<int:run_id>/cost/', RunCostSummaryAPI.as_view(), name='pe-run-cost'),
+    path('costs/analytics/', CostAnalyticsAPI.as_view(), name='pe-cost-analytics'),
+
+    # ------------------------------------------------------------------
+    # QC Checks
+    # ------------------------------------------------------------------
+    path('runs/<int:run_id>/qc/inprocess/', InProcessQCListCreateAPI.as_view(), name='pe-qc-inprocess-list'),
+    path('runs/<int:run_id>/qc/inprocess/<int:check_id>/', InProcessQCDetailAPI.as_view(), name='pe-qc-inprocess-detail'),
+    path('runs/<int:run_id>/qc/final/', FinalQCCheckAPI.as_view(), name='pe-qc-final'),
+
+    # ------------------------------------------------------------------
+    # Extended Analytics
+    # ------------------------------------------------------------------
+    path('reports/analytics/oee/', OEEAnalyticsAPI.as_view(), name='pe-analytics-oee'),
+    path('reports/analytics/downtime/', DowntimeAnalyticsAPI.as_view(), name='pe-analytics-downtime'),
+    path('reports/analytics/waste/', WasteAnalyticsAPI.as_view(), name='pe-analytics-waste'),
 ]

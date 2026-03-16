@@ -6,6 +6,12 @@ from rest_framework.permissions import IsAuthenticated
 
 from company.permissions import HasCompanyContext
 from .services import ProductionExecutionService
+from .models import (
+    ProductionRun, MachineBreakdown, WasteLog,
+    ResourceElectricity, ResourceWater, ResourceGas, ResourceCompressedAir,
+    ResourceLabour, ResourceMachineCost, ResourceOverhead,
+    ProductionRunCost, InProcessQCCheck, FinalQCCheck,
+)
 from .serializers import (
     # Master Data
     ProductionLineSerializer, ProductionLineCreateSerializer,
@@ -31,6 +37,19 @@ from .serializers import (
     MachineChecklistEntrySerializer, MachineChecklistCreateSerializer,
     # Waste
     WasteLogSerializer, WasteLogCreateSerializer, WasteApprovalSerializer,
+    # Resource Tracking
+    ResourceElectricitySerializer, ResourceElectricityCreateSerializer,
+    ResourceWaterSerializer, ResourceWaterCreateSerializer,
+    ResourceGasSerializer, ResourceGasCreateSerializer,
+    ResourceCompressedAirSerializer, ResourceCompressedAirCreateSerializer,
+    ResourceLabourSerializer, ResourceLabourCreateSerializer,
+    ResourceMachineCostSerializer, ResourceMachineCostCreateSerializer,
+    ResourceOverheadSerializer, ResourceOverheadCreateSerializer,
+    # Cost
+    ProductionRunCostSerializer,
+    # QC
+    InProcessQCCheckSerializer, InProcessQCCheckCreateSerializer,
+    FinalQCCheckSerializer, FinalQCCheckCreateSerializer,
 )
 from .permissions import (
     CanManageProductionLines, CanManageMachines, CanManageChecklistTemplates,
@@ -921,3 +940,775 @@ class AnalyticsAPI(APIView):
             line_id=request.GET.get('line_id'),
         )
         return Response(analytics)
+
+
+# ===========================================================================
+# SAP Orders Proxy Views
+# ===========================================================================
+
+class SAPProductionOrderListAPI(APIView):
+    permission_classes = [IsAuthenticated, HasCompanyContext, CanViewProductionRun]
+
+    def get(self, request):
+        from .services.sap_reader import ProductionOrderReader, SAPReadError
+        try:
+            reader = ProductionOrderReader(request.company.company.code)
+            orders = reader.get_released_production_orders()
+        except SAPReadError as e:
+            return Response({'detail': str(e)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        return Response(orders)
+
+
+class SAPProductionOrderDetailAPI(APIView):
+    permission_classes = [IsAuthenticated, HasCompanyContext, CanViewProductionRun]
+
+    def get(self, request, doc_entry):
+        from .services.sap_reader import ProductionOrderReader, SAPReadError
+        try:
+            reader = ProductionOrderReader(request.company.company.code)
+            detail = reader.get_production_order_detail(doc_entry)
+        except SAPReadError as e:
+            return Response({'detail': str(e)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        return Response(detail)
+
+
+# ===========================================================================
+# Resource Tracking — Electricity
+# ===========================================================================
+
+class ResourceElectricityListCreateAPI(APIView):
+    permission_classes = [IsAuthenticated, HasCompanyContext, CanCreateMaterialUsage]
+
+    def get(self, request, run_id):
+        service = _get_service(request)
+        try:
+            run = service._get_run_or_raise(run_id)
+        except ValueError as e:
+            return Response({'detail': str(e)}, status=status.HTTP_404_NOT_FOUND)
+        entries = run.electricity_usage.all()
+        return Response(ResourceElectricitySerializer(entries, many=True).data)
+
+    def post(self, request, run_id):
+        serializer = ResourceElectricityCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({'detail': 'Invalid data.', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        service = _get_service(request)
+        try:
+            run = service._get_run_or_raise(run_id)
+            entry = ResourceElectricity.objects.create(
+                production_run=run,
+                created_by=request.user,
+                **serializer.validated_data
+            )
+            from .services.cost_calculator import recalculate_run_cost
+            recalculate_run_cost(run)
+        except ValueError as e:
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(ResourceElectricitySerializer(entry).data, status=status.HTTP_201_CREATED)
+
+
+class ResourceElectricityDetailAPI(APIView):
+    permission_classes = [IsAuthenticated, HasCompanyContext, CanCreateMaterialUsage]
+
+    def patch(self, request, run_id, entry_id):
+        service = _get_service(request)
+        try:
+            run = service._get_run_or_raise(run_id)
+            entry = ResourceElectricity.objects.get(id=entry_id, production_run=run)
+        except (ValueError, ResourceElectricity.DoesNotExist) as e:
+            return Response({'detail': str(e)}, status=status.HTTP_404_NOT_FOUND)
+        for field in ['description', 'units_consumed', 'rate_per_unit']:
+            if field in request.data:
+                setattr(entry, field, request.data[field])
+        entry.save()
+        from .services.cost_calculator import recalculate_run_cost
+        recalculate_run_cost(run)
+        return Response(ResourceElectricitySerializer(entry).data)
+
+    def delete(self, request, run_id, entry_id):
+        service = _get_service(request)
+        try:
+            run = service._get_run_or_raise(run_id)
+            entry = ResourceElectricity.objects.get(id=entry_id, production_run=run)
+        except (ValueError, ResourceElectricity.DoesNotExist) as e:
+            return Response({'detail': str(e)}, status=status.HTTP_404_NOT_FOUND)
+        entry.delete()
+        from .services.cost_calculator import recalculate_run_cost
+        recalculate_run_cost(run)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ===========================================================================
+# Resource Tracking — Water
+# ===========================================================================
+
+class ResourceWaterListCreateAPI(APIView):
+    permission_classes = [IsAuthenticated, HasCompanyContext, CanCreateMaterialUsage]
+
+    def get(self, request, run_id):
+        service = _get_service(request)
+        try:
+            run = service._get_run_or_raise(run_id)
+        except ValueError as e:
+            return Response({'detail': str(e)}, status=status.HTTP_404_NOT_FOUND)
+        entries = run.water_usage.all()
+        return Response(ResourceWaterSerializer(entries, many=True).data)
+
+    def post(self, request, run_id):
+        serializer = ResourceWaterCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({'detail': 'Invalid data.', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        service = _get_service(request)
+        try:
+            run = service._get_run_or_raise(run_id)
+            entry = ResourceWater.objects.create(
+                production_run=run,
+                created_by=request.user,
+                **serializer.validated_data
+            )
+            from .services.cost_calculator import recalculate_run_cost
+            recalculate_run_cost(run)
+        except ValueError as e:
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(ResourceWaterSerializer(entry).data, status=status.HTTP_201_CREATED)
+
+
+class ResourceWaterDetailAPI(APIView):
+    permission_classes = [IsAuthenticated, HasCompanyContext, CanCreateMaterialUsage]
+
+    def patch(self, request, run_id, entry_id):
+        service = _get_service(request)
+        try:
+            run = service._get_run_or_raise(run_id)
+            entry = ResourceWater.objects.get(id=entry_id, production_run=run)
+        except (ValueError, ResourceWater.DoesNotExist) as e:
+            return Response({'detail': str(e)}, status=status.HTTP_404_NOT_FOUND)
+        for field in ['description', 'volume_consumed', 'rate_per_unit']:
+            if field in request.data:
+                setattr(entry, field, request.data[field])
+        entry.save()
+        from .services.cost_calculator import recalculate_run_cost
+        recalculate_run_cost(run)
+        return Response(ResourceWaterSerializer(entry).data)
+
+    def delete(self, request, run_id, entry_id):
+        service = _get_service(request)
+        try:
+            run = service._get_run_or_raise(run_id)
+            entry = ResourceWater.objects.get(id=entry_id, production_run=run)
+        except (ValueError, ResourceWater.DoesNotExist) as e:
+            return Response({'detail': str(e)}, status=status.HTTP_404_NOT_FOUND)
+        entry.delete()
+        from .services.cost_calculator import recalculate_run_cost
+        recalculate_run_cost(run)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ===========================================================================
+# Resource Tracking — Gas
+# ===========================================================================
+
+class ResourceGasListCreateAPI(APIView):
+    permission_classes = [IsAuthenticated, HasCompanyContext, CanCreateMaterialUsage]
+
+    def get(self, request, run_id):
+        service = _get_service(request)
+        try:
+            run = service._get_run_or_raise(run_id)
+        except ValueError as e:
+            return Response({'detail': str(e)}, status=status.HTTP_404_NOT_FOUND)
+        entries = run.gas_usage.all()
+        return Response(ResourceGasSerializer(entries, many=True).data)
+
+    def post(self, request, run_id):
+        serializer = ResourceGasCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({'detail': 'Invalid data.', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        service = _get_service(request)
+        try:
+            run = service._get_run_or_raise(run_id)
+            entry = ResourceGas.objects.create(
+                production_run=run,
+                created_by=request.user,
+                **serializer.validated_data
+            )
+            from .services.cost_calculator import recalculate_run_cost
+            recalculate_run_cost(run)
+        except ValueError as e:
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(ResourceGasSerializer(entry).data, status=status.HTTP_201_CREATED)
+
+
+class ResourceGasDetailAPI(APIView):
+    permission_classes = [IsAuthenticated, HasCompanyContext, CanCreateMaterialUsage]
+
+    def patch(self, request, run_id, entry_id):
+        service = _get_service(request)
+        try:
+            run = service._get_run_or_raise(run_id)
+            entry = ResourceGas.objects.get(id=entry_id, production_run=run)
+        except (ValueError, ResourceGas.DoesNotExist) as e:
+            return Response({'detail': str(e)}, status=status.HTTP_404_NOT_FOUND)
+        for field in ['description', 'qty_consumed', 'rate_per_unit']:
+            if field in request.data:
+                setattr(entry, field, request.data[field])
+        entry.save()
+        from .services.cost_calculator import recalculate_run_cost
+        recalculate_run_cost(run)
+        return Response(ResourceGasSerializer(entry).data)
+
+    def delete(self, request, run_id, entry_id):
+        service = _get_service(request)
+        try:
+            run = service._get_run_or_raise(run_id)
+            entry = ResourceGas.objects.get(id=entry_id, production_run=run)
+        except (ValueError, ResourceGas.DoesNotExist) as e:
+            return Response({'detail': str(e)}, status=status.HTTP_404_NOT_FOUND)
+        entry.delete()
+        from .services.cost_calculator import recalculate_run_cost
+        recalculate_run_cost(run)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ===========================================================================
+# Resource Tracking — Compressed Air
+# ===========================================================================
+
+class ResourceCompressedAirListCreateAPI(APIView):
+    permission_classes = [IsAuthenticated, HasCompanyContext, CanCreateMaterialUsage]
+
+    def get(self, request, run_id):
+        service = _get_service(request)
+        try:
+            run = service._get_run_or_raise(run_id)
+        except ValueError as e:
+            return Response({'detail': str(e)}, status=status.HTTP_404_NOT_FOUND)
+        entries = run.compressed_air_usage.all()
+        return Response(ResourceCompressedAirSerializer(entries, many=True).data)
+
+    def post(self, request, run_id):
+        serializer = ResourceCompressedAirCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({'detail': 'Invalid data.', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        service = _get_service(request)
+        try:
+            run = service._get_run_or_raise(run_id)
+            entry = ResourceCompressedAir.objects.create(
+                production_run=run,
+                created_by=request.user,
+                **serializer.validated_data
+            )
+            from .services.cost_calculator import recalculate_run_cost
+            recalculate_run_cost(run)
+        except ValueError as e:
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(ResourceCompressedAirSerializer(entry).data, status=status.HTTP_201_CREATED)
+
+
+class ResourceCompressedAirDetailAPI(APIView):
+    permission_classes = [IsAuthenticated, HasCompanyContext, CanCreateMaterialUsage]
+
+    def patch(self, request, run_id, entry_id):
+        service = _get_service(request)
+        try:
+            run = service._get_run_or_raise(run_id)
+            entry = ResourceCompressedAir.objects.get(id=entry_id, production_run=run)
+        except (ValueError, ResourceCompressedAir.DoesNotExist) as e:
+            return Response({'detail': str(e)}, status=status.HTTP_404_NOT_FOUND)
+        for field in ['description', 'units_consumed', 'rate_per_unit']:
+            if field in request.data:
+                setattr(entry, field, request.data[field])
+        entry.save()
+        from .services.cost_calculator import recalculate_run_cost
+        recalculate_run_cost(run)
+        return Response(ResourceCompressedAirSerializer(entry).data)
+
+    def delete(self, request, run_id, entry_id):
+        service = _get_service(request)
+        try:
+            run = service._get_run_or_raise(run_id)
+            entry = ResourceCompressedAir.objects.get(id=entry_id, production_run=run)
+        except (ValueError, ResourceCompressedAir.DoesNotExist) as e:
+            return Response({'detail': str(e)}, status=status.HTTP_404_NOT_FOUND)
+        entry.delete()
+        from .services.cost_calculator import recalculate_run_cost
+        recalculate_run_cost(run)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ===========================================================================
+# Resource Tracking — Labour
+# ===========================================================================
+
+class ResourceLabourListCreateAPI(APIView):
+    permission_classes = [IsAuthenticated, HasCompanyContext, CanCreateMaterialUsage]
+
+    def get(self, request, run_id):
+        service = _get_service(request)
+        try:
+            run = service._get_run_or_raise(run_id)
+        except ValueError as e:
+            return Response({'detail': str(e)}, status=status.HTTP_404_NOT_FOUND)
+        entries = run.labour_entries.all()
+        return Response(ResourceLabourSerializer(entries, many=True).data)
+
+    def post(self, request, run_id):
+        serializer = ResourceLabourCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({'detail': 'Invalid data.', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        service = _get_service(request)
+        try:
+            run = service._get_run_or_raise(run_id)
+            entry = ResourceLabour.objects.create(
+                production_run=run,
+                created_by=request.user,
+                **serializer.validated_data
+            )
+            from .services.cost_calculator import recalculate_run_cost
+            recalculate_run_cost(run)
+        except ValueError as e:
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(ResourceLabourSerializer(entry).data, status=status.HTTP_201_CREATED)
+
+
+class ResourceLabourDetailAPI(APIView):
+    permission_classes = [IsAuthenticated, HasCompanyContext, CanCreateMaterialUsage]
+
+    def patch(self, request, run_id, entry_id):
+        service = _get_service(request)
+        try:
+            run = service._get_run_or_raise(run_id)
+            entry = ResourceLabour.objects.get(id=entry_id, production_run=run)
+        except (ValueError, ResourceLabour.DoesNotExist) as e:
+            return Response({'detail': str(e)}, status=status.HTTP_404_NOT_FOUND)
+        for field in ['worker_name', 'hours_worked', 'rate_per_hour']:
+            if field in request.data:
+                setattr(entry, field, request.data[field])
+        entry.save()
+        from .services.cost_calculator import recalculate_run_cost
+        recalculate_run_cost(run)
+        return Response(ResourceLabourSerializer(entry).data)
+
+    def delete(self, request, run_id, entry_id):
+        service = _get_service(request)
+        try:
+            run = service._get_run_or_raise(run_id)
+            entry = ResourceLabour.objects.get(id=entry_id, production_run=run)
+        except (ValueError, ResourceLabour.DoesNotExist) as e:
+            return Response({'detail': str(e)}, status=status.HTTP_404_NOT_FOUND)
+        entry.delete()
+        from .services.cost_calculator import recalculate_run_cost
+        recalculate_run_cost(run)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ===========================================================================
+# Resource Tracking — Machine Costs
+# ===========================================================================
+
+class ResourceMachineCostListCreateAPI(APIView):
+    permission_classes = [IsAuthenticated, HasCompanyContext, CanCreateMaterialUsage]
+
+    def get(self, request, run_id):
+        service = _get_service(request)
+        try:
+            run = service._get_run_or_raise(run_id)
+        except ValueError as e:
+            return Response({'detail': str(e)}, status=status.HTTP_404_NOT_FOUND)
+        entries = run.machine_cost_entries.all()
+        return Response(ResourceMachineCostSerializer(entries, many=True).data)
+
+    def post(self, request, run_id):
+        serializer = ResourceMachineCostCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({'detail': 'Invalid data.', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        service = _get_service(request)
+        try:
+            run = service._get_run_or_raise(run_id)
+            entry = ResourceMachineCost.objects.create(
+                production_run=run,
+                created_by=request.user,
+                **serializer.validated_data
+            )
+            from .services.cost_calculator import recalculate_run_cost
+            recalculate_run_cost(run)
+        except ValueError as e:
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(ResourceMachineCostSerializer(entry).data, status=status.HTTP_201_CREATED)
+
+
+class ResourceMachineCostDetailAPI(APIView):
+    permission_classes = [IsAuthenticated, HasCompanyContext, CanCreateMaterialUsage]
+
+    def patch(self, request, run_id, entry_id):
+        service = _get_service(request)
+        try:
+            run = service._get_run_or_raise(run_id)
+            entry = ResourceMachineCost.objects.get(id=entry_id, production_run=run)
+        except (ValueError, ResourceMachineCost.DoesNotExist) as e:
+            return Response({'detail': str(e)}, status=status.HTTP_404_NOT_FOUND)
+        for field in ['machine_name', 'hours_used', 'rate_per_hour']:
+            if field in request.data:
+                setattr(entry, field, request.data[field])
+        entry.save()
+        from .services.cost_calculator import recalculate_run_cost
+        recalculate_run_cost(run)
+        return Response(ResourceMachineCostSerializer(entry).data)
+
+    def delete(self, request, run_id, entry_id):
+        service = _get_service(request)
+        try:
+            run = service._get_run_or_raise(run_id)
+            entry = ResourceMachineCost.objects.get(id=entry_id, production_run=run)
+        except (ValueError, ResourceMachineCost.DoesNotExist) as e:
+            return Response({'detail': str(e)}, status=status.HTTP_404_NOT_FOUND)
+        entry.delete()
+        from .services.cost_calculator import recalculate_run_cost
+        recalculate_run_cost(run)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ===========================================================================
+# Resource Tracking — Overhead
+# ===========================================================================
+
+class ResourceOverheadListCreateAPI(APIView):
+    permission_classes = [IsAuthenticated, HasCompanyContext, CanCreateMaterialUsage]
+
+    def get(self, request, run_id):
+        service = _get_service(request)
+        try:
+            run = service._get_run_or_raise(run_id)
+        except ValueError as e:
+            return Response({'detail': str(e)}, status=status.HTTP_404_NOT_FOUND)
+        entries = run.overhead_entries.all()
+        return Response(ResourceOverheadSerializer(entries, many=True).data)
+
+    def post(self, request, run_id):
+        serializer = ResourceOverheadCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({'detail': 'Invalid data.', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        service = _get_service(request)
+        try:
+            run = service._get_run_or_raise(run_id)
+            entry = ResourceOverhead.objects.create(
+                production_run=run,
+                created_by=request.user,
+                **serializer.validated_data
+            )
+            from .services.cost_calculator import recalculate_run_cost
+            recalculate_run_cost(run)
+        except ValueError as e:
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(ResourceOverheadSerializer(entry).data, status=status.HTTP_201_CREATED)
+
+
+class ResourceOverheadDetailAPI(APIView):
+    permission_classes = [IsAuthenticated, HasCompanyContext, CanCreateMaterialUsage]
+
+    def patch(self, request, run_id, entry_id):
+        service = _get_service(request)
+        try:
+            run = service._get_run_or_raise(run_id)
+            entry = ResourceOverhead.objects.get(id=entry_id, production_run=run)
+        except (ValueError, ResourceOverhead.DoesNotExist) as e:
+            return Response({'detail': str(e)}, status=status.HTTP_404_NOT_FOUND)
+        for field in ['expense_name', 'amount']:
+            if field in request.data:
+                setattr(entry, field, request.data[field])
+        entry.save()
+        from .services.cost_calculator import recalculate_run_cost
+        recalculate_run_cost(run)
+        return Response(ResourceOverheadSerializer(entry).data)
+
+    def delete(self, request, run_id, entry_id):
+        service = _get_service(request)
+        try:
+            run = service._get_run_or_raise(run_id)
+            entry = ResourceOverhead.objects.get(id=entry_id, production_run=run)
+        except (ValueError, ResourceOverhead.DoesNotExist) as e:
+            return Response({'detail': str(e)}, status=status.HTTP_404_NOT_FOUND)
+        entry.delete()
+        from .services.cost_calculator import recalculate_run_cost
+        recalculate_run_cost(run)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ===========================================================================
+# Cost Summary
+# ===========================================================================
+
+class RunCostSummaryAPI(APIView):
+    permission_classes = [IsAuthenticated, HasCompanyContext, CanViewProductionRun]
+
+    def get(self, request, run_id):
+        service = _get_service(request)
+        try:
+            run = service._get_run_or_raise(run_id)
+        except ValueError as e:
+            return Response({'detail': str(e)}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            cost = run.cost_summary
+            return Response(ProductionRunCostSerializer(cost).data)
+        except Exception:
+            return Response({'detail': 'No cost data yet.'}, status=status.HTTP_404_NOT_FOUND)
+
+
+# ===========================================================================
+# Cost Analytics
+# ===========================================================================
+
+class CostAnalyticsAPI(APIView):
+    permission_classes = [IsAuthenticated, HasCompanyContext, CanViewReports]
+
+    def get(self, request):
+        from company.models import Company
+        try:
+            company = Company.objects.get(code=request.company.company.code)
+        except Company.DoesNotExist:
+            return Response({'detail': 'Company not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        date_from = request.GET.get('date_from')
+        date_to = request.GET.get('date_to')
+        line_id = request.GET.get('line')
+
+        runs_qs = ProductionRun.objects.filter(company=company)
+        if date_from:
+            runs_qs = runs_qs.filter(date__gte=date_from)
+        if date_to:
+            runs_qs = runs_qs.filter(date__lte=date_to)
+        if line_id:
+            runs_qs = runs_qs.filter(line_id=line_id)
+
+        costs = ProductionRunCost.objects.filter(
+            production_run__in=runs_qs
+        ).select_related('production_run', 'production_run__line')
+
+        return Response(ProductionRunCostSerializer(costs, many=True).data)
+
+
+# ===========================================================================
+# QC Checks — In-Process
+# ===========================================================================
+
+class InProcessQCListCreateAPI(APIView):
+    permission_classes = [IsAuthenticated, HasCompanyContext, CanViewProductionRun]
+
+    def get(self, request, run_id):
+        service = _get_service(request)
+        try:
+            run = service._get_run_or_raise(run_id)
+        except ValueError as e:
+            return Response({'detail': str(e)}, status=status.HTTP_404_NOT_FOUND)
+        checks = run.inprocess_qc_checks.all()
+        return Response(InProcessQCCheckSerializer(checks, many=True).data)
+
+    def post(self, request, run_id):
+        serializer = InProcessQCCheckCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({'detail': 'Invalid data.', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        service = _get_service(request)
+        try:
+            run = service._get_run_or_raise(run_id)
+        except ValueError as e:
+            return Response({'detail': str(e)}, status=status.HTTP_404_NOT_FOUND)
+        check = InProcessQCCheck.objects.create(
+            production_run=run,
+            checked_by=request.user,
+            **serializer.validated_data
+        )
+        return Response(InProcessQCCheckSerializer(check).data, status=status.HTTP_201_CREATED)
+
+
+class InProcessQCDetailAPI(APIView):
+    permission_classes = [IsAuthenticated, HasCompanyContext, CanViewProductionRun]
+
+    def patch(self, request, run_id, check_id):
+        service = _get_service(request)
+        try:
+            run = service._get_run_or_raise(run_id)
+            check = InProcessQCCheck.objects.get(id=check_id, production_run=run)
+        except (ValueError, InProcessQCCheck.DoesNotExist):
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        for field in ['checked_at', 'parameter', 'acceptable_min', 'acceptable_max', 'actual_value', 'result', 'remarks']:
+            if field in request.data:
+                setattr(check, field, request.data[field])
+        check.save()
+        return Response(InProcessQCCheckSerializer(check).data)
+
+    def delete(self, request, run_id, check_id):
+        service = _get_service(request)
+        try:
+            run = service._get_run_or_raise(run_id)
+            check = InProcessQCCheck.objects.get(id=check_id, production_run=run)
+        except (ValueError, InProcessQCCheck.DoesNotExist):
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        check.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ===========================================================================
+# QC Checks — Final
+# ===========================================================================
+
+class FinalQCCheckAPI(APIView):
+    permission_classes = [IsAuthenticated, HasCompanyContext, CanViewProductionRun]
+
+    def get(self, request, run_id):
+        service = _get_service(request)
+        try:
+            run = service._get_run_or_raise(run_id)
+            check = run.final_qc
+        except (ValueError, FinalQCCheck.DoesNotExist):
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(FinalQCCheckSerializer(check).data)
+
+    def post(self, request, run_id):
+        serializer = FinalQCCheckCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({'detail': 'Invalid data.', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        service = _get_service(request)
+        try:
+            run = service._get_run_or_raise(run_id)
+        except ValueError as e:
+            return Response({'detail': str(e)}, status=status.HTTP_404_NOT_FOUND)
+        if FinalQCCheck.objects.filter(production_run=run).exists():
+            return Response({'detail': 'Final QC already exists. Use PATCH to update.'}, status=status.HTTP_400_BAD_REQUEST)
+        check = FinalQCCheck.objects.create(
+            production_run=run,
+            checked_by=request.user,
+            **serializer.validated_data
+        )
+        return Response(FinalQCCheckSerializer(check).data, status=status.HTTP_201_CREATED)
+
+    def patch(self, request, run_id):
+        service = _get_service(request)
+        try:
+            run = service._get_run_or_raise(run_id)
+            check = run.final_qc
+        except (ValueError, FinalQCCheck.DoesNotExist):
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        for field in ['checked_at', 'overall_result', 'parameters', 'remarks']:
+            if field in request.data:
+                setattr(check, field, request.data[field])
+        check.save()
+        return Response(FinalQCCheckSerializer(check).data)
+
+
+# ===========================================================================
+# Extended Analytics
+# ===========================================================================
+
+class OEEAnalyticsAPI(APIView):
+    permission_classes = [IsAuthenticated, HasCompanyContext, CanViewReports]
+
+    def get(self, request):
+        service = _get_service(request)
+        date_from = request.GET.get('date_from')
+        date_to = request.GET.get('date_to')
+        line_id = request.GET.get('line')
+        data = service.get_analytics(
+            date_from=date_from, date_to=date_to, line_id=line_id
+        )
+        # Enhance with OEE calculation
+        runs_qs = ProductionRun.objects.filter(company=service.company, status='COMPLETED')
+        if date_from:
+            runs_qs = runs_qs.filter(date__gte=date_from)
+        if date_to:
+            runs_qs = runs_qs.filter(date__lte=date_to)
+        if line_id:
+            runs_qs = runs_qs.filter(line_id=line_id)
+
+        # Per run OEE
+        run_oees = []
+        for run in runs_qs.select_related('line'):
+            available = 720
+            breakdown = run.total_breakdown_time or 0
+            operating = max(0, available - breakdown)
+            availability = (operating / available * 100) if available else 0
+
+            rated = float(run.rated_speed or 0)
+            actual_speed = (run.total_production / operating) if (operating > 0 and run.total_production) else 0
+            performance = (actual_speed / rated * 100) if rated else 0
+            performance = min(performance, 100)
+
+            quality = 100  # default, no reject data
+            oee = (availability * performance * quality) / 10000
+
+            run_oees.append({
+                'run_id': run.id,
+                'run_number': run.run_number,
+                'date': run.date,
+                'line': run.line.name,
+                'availability': round(availability, 1),
+                'performance': round(performance, 1),
+                'quality': round(quality, 1),
+                'oee': round(oee, 2),
+            })
+
+        data['per_run_oee'] = run_oees
+        return Response(data)
+
+
+class DowntimeAnalyticsAPI(APIView):
+    permission_classes = [IsAuthenticated, HasCompanyContext, CanViewReports]
+
+    def get(self, request):
+        service = _get_service(request)
+        date_from = request.GET.get('date_from')
+        date_to = request.GET.get('date_to')
+        machine_id = request.GET.get('machine')
+
+        qs = MachineBreakdown.objects.filter(
+            production_run__company=service.company
+        ).select_related('machine', 'production_run')
+
+        if date_from:
+            qs = qs.filter(production_run__date__gte=date_from)
+        if date_to:
+            qs = qs.filter(production_run__date__lte=date_to)
+        if machine_id:
+            qs = qs.filter(machine_id=machine_id)
+
+        from django.db.models import Sum, Count
+        agg = qs.values('reason').annotate(
+            count=Count('id'),
+            total_minutes=Sum('breakdown_minutes')
+        ).order_by('-total_minutes')
+
+        return Response({
+            'breakdowns': list(agg),
+            'total_count': qs.count(),
+            'total_minutes': qs.aggregate(t=Sum('breakdown_minutes'))['t'] or 0,
+        })
+
+
+class WasteAnalyticsAPI(APIView):
+    permission_classes = [IsAuthenticated, HasCompanyContext, CanViewReports]
+
+    def get(self, request):
+        service = _get_service(request)
+        date_from = request.GET.get('date_from')
+        date_to = request.GET.get('date_to')
+
+        qs = WasteLog.objects.filter(
+            production_run__company=service.company
+        )
+        if date_from:
+            qs = qs.filter(created_at__date__gte=date_from)
+        if date_to:
+            qs = qs.filter(created_at__date__lte=date_to)
+
+        from django.db.models import Sum, Count
+        by_material = qs.values('material_name', 'uom').annotate(
+            total_waste=Sum('wastage_qty'),
+            count=Count('id')
+        ).order_by('-total_waste')
+
+        by_status = qs.values('wastage_approval_status').annotate(count=Count('id'))
+
+        return Response({
+            'by_material': list(by_material),
+            'by_approval_status': list(by_status),
+            'total_waste_logs': qs.count(),
+        })

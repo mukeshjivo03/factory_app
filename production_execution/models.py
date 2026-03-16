@@ -553,3 +553,303 @@ class WasteLog(models.Model):
 
     def __str__(self):
         return f"{self.material_name} — {self.wastage_qty} {self.uom}"
+
+
+# ---------------------------------------------------------------------------
+# Resource Tracking Models
+# ---------------------------------------------------------------------------
+
+class ResourceElectricity(models.Model):
+    production_run = models.ForeignKey(
+        ProductionRun, on_delete=models.CASCADE, related_name='electricity_usage'
+    )
+    description = models.CharField(max_length=200, blank=True, default='')
+    units_consumed = models.DecimalField(max_digits=12, decimal_places=3)
+    rate_per_unit = models.DecimalField(max_digits=12, decimal_places=4)
+    total_cost = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='electricity_entries'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Electricity Usage'
+        verbose_name_plural = 'Electricity Usages'
+
+    def save(self, *args, **kwargs):
+        from decimal import Decimal
+        self.total_cost = Decimal(str(self.units_consumed)) * Decimal(str(self.rate_per_unit))
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Electricity — {self.units_consumed} units @ {self.rate_per_unit}"
+
+
+class ResourceWater(models.Model):
+    production_run = models.ForeignKey(
+        ProductionRun, on_delete=models.CASCADE, related_name='water_usage'
+    )
+    description = models.CharField(max_length=200, blank=True, default='')
+    volume_consumed = models.DecimalField(max_digits=12, decimal_places=3)
+    rate_per_unit = models.DecimalField(max_digits=12, decimal_places=4)
+    total_cost = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='water_entries'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Water Usage'
+        verbose_name_plural = 'Water Usages'
+
+    def save(self, *args, **kwargs):
+        from decimal import Decimal
+        self.total_cost = Decimal(str(self.volume_consumed)) * Decimal(str(self.rate_per_unit))
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Water — {self.volume_consumed} L @ {self.rate_per_unit}"
+
+
+class ResourceGas(models.Model):
+    production_run = models.ForeignKey(
+        ProductionRun, on_delete=models.CASCADE, related_name='gas_usage'
+    )
+    description = models.CharField(max_length=200, blank=True, default='')
+    qty_consumed = models.DecimalField(max_digits=12, decimal_places=3)
+    rate_per_unit = models.DecimalField(max_digits=12, decimal_places=4)
+    total_cost = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='gas_entries'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Gas Usage'
+        verbose_name_plural = 'Gas Usages'
+
+    def save(self, *args, **kwargs):
+        from decimal import Decimal
+        self.total_cost = Decimal(str(self.qty_consumed)) * Decimal(str(self.rate_per_unit))
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Gas — {self.qty_consumed} units @ {self.rate_per_unit}"
+
+
+class ResourceCompressedAir(models.Model):
+    production_run = models.ForeignKey(
+        ProductionRun, on_delete=models.CASCADE, related_name='compressed_air_usage'
+    )
+    description = models.CharField(max_length=200, blank=True, default='')
+    units_consumed = models.DecimalField(max_digits=12, decimal_places=3)
+    rate_per_unit = models.DecimalField(max_digits=12, decimal_places=4)
+    total_cost = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='compressed_air_entries'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Compressed Air Usage'
+        verbose_name_plural = 'Compressed Air Usages'
+
+    def save(self, *args, **kwargs):
+        from decimal import Decimal
+        self.total_cost = Decimal(str(self.units_consumed)) * Decimal(str(self.rate_per_unit))
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Compressed Air — {self.units_consumed} units @ {self.rate_per_unit}"
+
+
+class ResourceLabour(models.Model):
+    production_run = models.ForeignKey(
+        ProductionRun, on_delete=models.CASCADE, related_name='labour_entries'
+    )
+    worker_name = models.CharField(max_length=200)
+    hours_worked = models.DecimalField(max_digits=8, decimal_places=2)
+    rate_per_hour = models.DecimalField(max_digits=12, decimal_places=4)
+    total_cost = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='labour_entries_created'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Labour Entry'
+        verbose_name_plural = 'Labour Entries'
+
+    def save(self, *args, **kwargs):
+        from decimal import Decimal
+        self.total_cost = Decimal(str(self.hours_worked)) * Decimal(str(self.rate_per_hour))
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.worker_name} — {self.hours_worked}h @ {self.rate_per_hour}"
+
+
+class ResourceMachineCost(models.Model):
+    production_run = models.ForeignKey(
+        ProductionRun, on_delete=models.CASCADE, related_name='machine_cost_entries'
+    )
+    machine_name = models.CharField(max_length=200)
+    hours_used = models.DecimalField(max_digits=8, decimal_places=2)
+    rate_per_hour = models.DecimalField(max_digits=12, decimal_places=4)
+    total_cost = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='machine_cost_entries_created'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Machine Cost Entry'
+        verbose_name_plural = 'Machine Cost Entries'
+
+    def save(self, *args, **kwargs):
+        from decimal import Decimal
+        self.total_cost = Decimal(str(self.hours_used)) * Decimal(str(self.rate_per_hour))
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.machine_name} — {self.hours_used}h @ {self.rate_per_hour}"
+
+
+class ResourceOverhead(models.Model):
+    production_run = models.ForeignKey(
+        ProductionRun, on_delete=models.CASCADE, related_name='overhead_entries'
+    )
+    expense_name = models.CharField(max_length=200)
+    amount = models.DecimalField(max_digits=15, decimal_places=2)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='overhead_entries_created'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Overhead Entry'
+        verbose_name_plural = 'Overhead Entries'
+
+    def __str__(self):
+        return f"{self.expense_name} — {self.amount}"
+
+
+# ---------------------------------------------------------------------------
+# Cost Management Model
+# ---------------------------------------------------------------------------
+
+class ProductionRunCost(models.Model):
+    production_run = models.OneToOneField(
+        ProductionRun, on_delete=models.CASCADE, related_name='cost_summary'
+    )
+    raw_material_cost = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    labour_cost = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    machine_cost = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    electricity_cost = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    water_cost = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    gas_cost = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    compressed_air_cost = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    overhead_cost = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    total_cost = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    produced_qty = models.DecimalField(max_digits=15, decimal_places=3, default=0)
+    per_unit_cost = models.DecimalField(max_digits=15, decimal_places=4, default=0)
+    calculated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Production Run Cost'
+        verbose_name_plural = 'Production Run Costs'
+
+    def __str__(self):
+        return f"Cost for Run #{self.production_run.run_number} — Per Unit: {self.per_unit_cost}"
+
+
+# ---------------------------------------------------------------------------
+# QC Check Models
+# ---------------------------------------------------------------------------
+
+class QCResult(models.TextChoices):
+    PASS = "PASS", "Pass"
+    FAIL = "FAIL", "Fail"
+    NA = "NA", "N/A"
+
+
+class FinalQCResult(models.TextChoices):
+    PASS = "PASS", "Pass"
+    FAIL = "FAIL", "Fail"
+    CONDITIONAL = "CONDITIONAL", "Conditional"
+
+
+class InProcessQCCheck(models.Model):
+    production_run = models.ForeignKey(
+        ProductionRun, on_delete=models.CASCADE, related_name='inprocess_qc_checks'
+    )
+    checked_at = models.DateTimeField()
+    parameter = models.CharField(max_length=200)
+    acceptable_min = models.DecimalField(max_digits=10, decimal_places=3, null=True, blank=True)
+    acceptable_max = models.DecimalField(max_digits=10, decimal_places=3, null=True, blank=True)
+    actual_value = models.DecimalField(max_digits=10, decimal_places=3, null=True, blank=True)
+    result = models.CharField(max_length=10, choices=QCResult.choices, default=QCResult.NA)
+    remarks = models.TextField(blank=True, default='')
+    checked_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='inprocess_qc_checks'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['checked_at']
+        verbose_name = 'In-Process QC Check'
+        verbose_name_plural = 'In-Process QC Checks'
+
+    def __str__(self):
+        return f"{self.parameter} — {self.result} @ {self.checked_at}"
+
+
+class FinalQCCheck(models.Model):
+    production_run = models.OneToOneField(
+        ProductionRun, on_delete=models.CASCADE, related_name='final_qc'
+    )
+    checked_at = models.DateTimeField()
+    overall_result = models.CharField(
+        max_length=15, choices=FinalQCResult.choices, default=FinalQCResult.PASS
+    )
+    parameters = models.JSONField(
+        default=list,
+        help_text="List of {name, expected, actual, result} dicts"
+    )
+    remarks = models.TextField(blank=True, default='')
+    checked_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='final_qc_checks'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Final QC Check'
+        verbose_name_plural = 'Final QC Checks'
+
+    def __str__(self):
+        return f"Final QC for Run #{self.production_run.run_number} — {self.overall_result}"
