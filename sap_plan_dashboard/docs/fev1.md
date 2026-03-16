@@ -4,6 +4,7 @@
 > **Backend:** Django REST Framework · SAP HANA (live data)
 > **Base path:** `/api/v1/sap/plan-dashboard/`
 > **Auth:** JWT Bearer · Company-Code header
+> **Status:** All 4 endpoints verified against live SAP HANA — 41/41 tests pass (2026-03-16)
 
 ---
 
