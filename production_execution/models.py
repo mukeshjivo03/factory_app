@@ -152,10 +152,9 @@ class ProductionRun(models.Model):
         'company.Company', on_delete=models.PROTECT,
         related_name='production_runs'
     )
-    production_plan = models.ForeignKey(
-        'production_planning.ProductionPlan',
-        on_delete=models.PROTECT,
-        related_name='production_runs'
+    sap_doc_entry = models.IntegerField(
+        null=True, blank=True,
+        help_text="SAP OWOR DocEntry — links run to SAP production order"
     )
     run_number = models.PositiveSmallIntegerField()
     date = models.DateField()
@@ -206,7 +205,7 @@ class ProductionRun(models.Model):
 
     class Meta:
         ordering = ['-date', 'line', 'run_number']
-        unique_together = ('company', 'production_plan', 'date', 'run_number')
+        unique_together = ('company', 'sap_doc_entry', 'date', 'run_number')
         verbose_name = 'Production Run'
         verbose_name_plural = 'Production Runs'
         permissions = [
@@ -391,10 +390,9 @@ class LineClearance(models.Model):
         ProductionLine, on_delete=models.PROTECT,
         related_name='line_clearances'
     )
-    production_plan = models.ForeignKey(
-        'production_planning.ProductionPlan',
-        on_delete=models.PROTECT,
-        related_name='line_clearances'
+    sap_doc_entry = models.IntegerField(
+        null=True, blank=True,
+        help_text="SAP OWOR DocEntry — links clearance to SAP production order"
     )
     document_id = models.CharField(
         max_length=50, blank=True, default='',

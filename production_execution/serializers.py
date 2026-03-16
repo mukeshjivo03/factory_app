@@ -67,7 +67,7 @@ class ChecklistTemplateCreateSerializer(serializers.Serializer):
 # ---------------------------------------------------------------------------
 
 class ProductionRunCreateSerializer(serializers.Serializer):
-    production_plan_id = serializers.IntegerField()
+    sap_doc_entry = serializers.IntegerField(required=False, allow_null=True)
     line_id = serializers.IntegerField()
     date = serializers.DateField()
     brand = serializers.CharField(max_length=200, required=False, allow_blank=True, default='')
@@ -89,12 +89,11 @@ class ProductionRunUpdateSerializer(serializers.Serializer):
 
 class ProductionRunListSerializer(serializers.ModelSerializer):
     line_name = serializers.CharField(source='line.name', read_only=True)
-    plan_item_name = serializers.CharField(source='production_plan.item_name', read_only=True)
 
     class Meta:
         model = ProductionRun
         fields = [
-            'id', 'production_plan', 'plan_item_name', 'run_number', 'date',
+            'id', 'sap_doc_entry', 'run_number', 'date',
             'line', 'line_name', 'brand', 'pack', 'sap_order_no', 'rated_speed',
             'total_production', 'total_breakdown_time', 'status',
             'created_by', 'created_at',
@@ -103,14 +102,13 @@ class ProductionRunListSerializer(serializers.ModelSerializer):
 
 class ProductionRunDetailSerializer(serializers.ModelSerializer):
     line_name = serializers.CharField(source='line.name', read_only=True)
-    plan_item_name = serializers.CharField(source='production_plan.item_name', read_only=True)
     logs = serializers.SerializerMethodField()
     breakdowns = serializers.SerializerMethodField()
 
     class Meta:
         model = ProductionRun
         fields = [
-            'id', 'production_plan', 'plan_item_name', 'run_number', 'date',
+            'id', 'sap_doc_entry', 'run_number', 'date',
             'line', 'line_name', 'brand', 'pack', 'sap_order_no', 'rated_speed',
             'total_production', 'total_minutes_pe', 'total_minutes_me',
             'total_breakdown_time', 'line_breakdown_time', 'external_breakdown_time',
@@ -277,7 +275,7 @@ class LineClearanceItemUpdateSerializer(serializers.Serializer):
 class LineClearanceCreateSerializer(serializers.Serializer):
     date = serializers.DateField()
     line_id = serializers.IntegerField()
-    production_plan_id = serializers.IntegerField()
+    sap_doc_entry = serializers.IntegerField(required=False, allow_null=True)
     document_id = serializers.CharField(max_length=50, required=False, allow_blank=True, default='')
 
 
@@ -288,7 +286,7 @@ class LineClearanceDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = LineClearance
         fields = [
-            'id', 'date', 'line', 'line_name', 'production_plan',
+            'id', 'date', 'line', 'line_name', 'sap_doc_entry',
             'document_id', 'verified_by',
             'qa_approved', 'qa_approved_by', 'qa_approved_at',
             'production_supervisor_sign', 'production_incharge_sign',
@@ -303,7 +301,7 @@ class LineClearanceListSerializer(serializers.ModelSerializer):
     class Meta:
         model = LineClearance
         fields = [
-            'id', 'date', 'line', 'line_name', 'production_plan',
+            'id', 'date', 'line', 'line_name', 'sap_doc_entry',
             'document_id', 'status', 'qa_approved',
             'created_by', 'created_at',
         ]

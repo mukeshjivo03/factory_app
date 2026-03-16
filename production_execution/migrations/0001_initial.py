@@ -11,7 +11,6 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('company', '0003_alter_usercompany_role'),
-        ('production_planning', '0004_alter_dailyproductionentry_shift_and_more'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
@@ -30,8 +29,8 @@ class Migration(migrations.Migration):
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
                 ('company', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='line_clearances', to='company.company')),
+                ('sap_doc_entry', models.IntegerField(blank=True, help_text='SAP OWOR DocEntry — links clearance to SAP production order', null=True)),
                 ('created_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='created_clearances', to=settings.AUTH_USER_MODEL)),
-                ('production_plan', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='line_clearances', to='production_planning.productionplan')),
                 ('qa_approved_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='qa_approved_clearances', to=settings.AUTH_USER_MODEL)),
                 ('verified_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='verified_clearances', to=settings.AUTH_USER_MODEL)),
             ],
@@ -137,17 +136,17 @@ class Migration(migrations.Migration):
                 ('status', models.CharField(choices=[('DRAFT', 'Draft'), ('IN_PROGRESS', 'In Progress'), ('COMPLETED', 'Completed')], default='DRAFT', max_length=20)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
+                ('sap_doc_entry', models.IntegerField(blank=True, help_text='SAP OWOR DocEntry — links run to SAP production order', null=True)),
                 ('company', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='production_runs', to='company.company')),
                 ('created_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='created_production_runs', to=settings.AUTH_USER_MODEL)),
                 ('line', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='production_runs', to='production_execution.productionline')),
-                ('production_plan', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='production_runs', to='production_planning.productionplan')),
             ],
             options={
                 'verbose_name': 'Production Run',
                 'verbose_name_plural': 'Production Runs',
                 'ordering': ['-date', 'line', 'run_number'],
                 'permissions': [('can_manage_production_lines', 'Can manage production lines'), ('can_manage_machines', 'Can manage machines'), ('can_manage_checklist_templates', 'Can manage checklist templates'), ('can_view_production_run', 'Can view production runs'), ('can_create_production_run', 'Can create production runs'), ('can_edit_production_run', 'Can edit production runs'), ('can_complete_production_run', 'Can complete production runs'), ('can_view_production_log', 'Can view production logs'), ('can_edit_production_log', 'Can create/edit production logs'), ('can_view_breakdown', 'Can view breakdowns'), ('can_create_breakdown', 'Can create breakdowns'), ('can_edit_breakdown', 'Can edit breakdowns'), ('can_view_material_usage', 'Can view material usage'), ('can_create_material_usage', 'Can create material usage'), ('can_edit_material_usage', 'Can edit material usage'), ('can_view_machine_runtime', 'Can view machine runtime'), ('can_create_machine_runtime', 'Can create machine runtime'), ('can_view_manpower', 'Can view manpower'), ('can_create_manpower', 'Can create manpower'), ('can_view_line_clearance', 'Can view line clearance'), ('can_create_line_clearance', 'Can create line clearance'), ('can_approve_line_clearance_qa', 'Can QA-approve line clearance'), ('can_view_machine_checklist', 'Can view machine checklists'), ('can_create_machine_checklist', 'Can create machine checklist entries'), ('can_view_waste_log', 'Can view waste logs'), ('can_create_waste_log', 'Can create waste logs'), ('can_approve_waste_engineer', 'Can engineer-approve waste'), ('can_approve_waste_am', 'Can AM-approve waste'), ('can_approve_waste_store', 'Can store-approve waste'), ('can_approve_waste_hod', 'Can HOD-approve waste'), ('can_view_reports', 'Can view production reports')],
-                'unique_together': {('company', 'production_plan', 'date', 'run_number')},
+                'unique_together': {('company', 'sap_doc_entry', 'date', 'run_number')},
             },
         ),
         migrations.CreateModel(

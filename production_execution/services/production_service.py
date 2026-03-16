@@ -187,66 +187,40 @@ class ProductionExecutionService:
     # PRODUCTION RUNS
     # ==================================================================
 
-    def list_runs(self, date=None, line_id=None, status=None, production_plan_id=None):
+    def list_runs(self, date=None, line_id=None, status=None, sap_doc_entry=None):
         qs = ProductionRun.objects.filter(
             company=self.company
-        ).select_related('line', 'production_plan', 'created_by')
+        ).select_related('line', 'created_by')
         if date:
             qs = qs.filter(date=date)
         if line_id:
             qs = qs.filter(line_id=line_id)
         if status:
             qs = qs.filter(status=status)
-        if production_plan_id:
-            qs = qs.filter(production_plan_id=production_plan_id)
+        if sap_doc_entry:
+            qs = qs.filter(sap_doc_entry=sap_doc_entry)
         return qs
 
     @transaction.atomic
     def create_run(self, data: dict, user) -> ProductionRun:
-        from production_planning.models import ProductionPlan, PlanStatus
-
-        # Validate production plan
-        try:
-            plan = ProductionPlan.objects.get(
-                id=data['production_plan_id'],
-                company__code=self.company_code
-            )
-        except ProductionPlan.DoesNotExist:
-            raise ValueError("Production plan not found.")
-
-        if plan.status not in (PlanStatus.OPEN, PlanStatus.IN_PROGRESS):
-            raise ValueError(
-                f"Cannot start a run for a plan with status '{plan.status}'. "
-                f"Plan must be OPEN or IN_PROGRESS."
-            )
-
         # Validate line
         line = self._get_line_or_raise(data['line_id'])
         if not line.is_active:
             raise ValueError(f"Production line '{line.name}' is not active.")
 
+        sap_doc_entry = data.get('sap_doc_entry')
+
         # Auto-increment run_number
         last_run = ProductionRun.objects.filter(
             company=self.company,
-            production_plan=plan,
+            sap_doc_entry=sap_doc_entry,
             date=data['date'],
         ).order_by('-run_number').first()
         run_number = (last_run.run_number + 1) if last_run else 1
 
-        # Check line clearance (warning, not blocker)
-        warnings = []
-        clearance_exists = LineClearance.objects.filter(
-            company=self.company,
-            production_plan=plan,
-            line=line,
-            status=ClearanceStatus.CLEARED,
-        ).exists()
-        if not clearance_exists:
-            warnings.append("No cleared line clearance found for this plan+line.")
-
         run = ProductionRun.objects.create(
             company=self.company,
-            production_plan=plan,
+            sap_doc_entry=sap_doc_entry,
             run_number=run_number,
             date=data['date'],
             line=line,
@@ -323,7 +297,7 @@ class ProductionExecutionService:
     def _get_run_or_raise(self, run_id: int) -> ProductionRun:
         try:
             return ProductionRun.objects.select_related(
-                'line', 'production_plan'
+                'line'
             ).prefetch_related(
                 'logs', 'breakdowns'
             ).get(id=run_id, company=self.company)
@@ -652,23 +626,13 @@ class ProductionExecutionService:
 
     @transaction.atomic
     def create_clearance(self, data: dict, user) -> LineClearance:
-        from production_planning.models import ProductionPlan
-
         line = self._get_line_or_raise(data['line_id'])
-
-        try:
-            plan = ProductionPlan.objects.get(
-                id=data['production_plan_id'],
-                company__code=self.company_code
-            )
-        except ProductionPlan.DoesNotExist:
-            raise ValueError("Production plan not found.")
 
         clearance = LineClearance.objects.create(
             company=self.company,
             date=data['date'],
             line=line,
-            production_plan=plan,
+            sap_doc_entry=data.get('sap_doc_entry'),
             document_id=data.get('document_id', ''),
             status=ClearanceStatus.DRAFT,
             created_by=user,
@@ -923,7 +887,7 @@ class ProductionExecutionService:
     def get_daily_production_report(self, date, line_id=None):
         qs = ProductionRun.objects.filter(
             company=self.company, date=date
-        ).select_related('line', 'production_plan').prefetch_related(
+        ).select_related('line').prefetch_related(
             'logs', 'breakdowns', 'breakdowns__machine'
         )
         if line_id:

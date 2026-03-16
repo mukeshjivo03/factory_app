@@ -12,7 +12,6 @@ from rest_framework.test import APIClient
 from rest_framework import status
 
 from company.models import Company, UserCompany, UserRole
-from production_planning.models import ProductionPlan, PlanStatus
 
 User = get_user_model()
 
@@ -45,17 +44,7 @@ class BaseTestCase(TestCase):
         self.client.force_authenticate(user=self.user)
         self.client.credentials(HTTP_COMPANY_CODE='TEST_CO')
 
-        self.plan = ProductionPlan.objects.create(
-            company=self.company,
-            item_code='FG-OIL-1L',
-            item_name='Oil 1L',
-            uom='BTL',
-            planned_qty=Decimal('1000'),
-            target_start_date=date.today() - timedelta(days=30),
-            due_date=date.today() + timedelta(days=30),
-            status=PlanStatus.OPEN,
-            created_by=self.user,
-        )
+        self.sap_doc_entry = 12345  # SAP OWOR DocEntry used in place of local plan
 
 
 class ProductionLineTests(BaseTestCase):
@@ -201,7 +190,7 @@ class ProductionRunTests(BaseTestCase):
 
     def _create_run(self):
         return self.client.post(f'{BASE_URL}/runs/', {
-            'production_plan_id': self.plan.id, 'line_id': self.line_id,
+            'sap_doc_entry': self.sap_doc_entry, 'line_id': self.line_id,
             'date': str(date.today()), 'brand': 'Test', 'rated_speed': '150.00',
         })
 
@@ -249,7 +238,7 @@ class HourlyLogTests(BaseTestCase):
         resp = self.client.post(f'{BASE_URL}/lines/', {'name': 'Line-1'})
         self.line_id = resp.data['id']
         r = self.client.post(f'{BASE_URL}/runs/', {
-            'production_plan_id': self.plan.id, 'line_id': self.line_id,
+            'sap_doc_entry': self.sap_doc_entry, 'line_id': self.line_id,
             'date': str(date.today()),
         })
         self.run_id = r.data['id']
@@ -324,7 +313,7 @@ class BreakdownTests(BaseTestCase):
         })
         self.machine_id = resp.data['id']
         r = self.client.post(f'{BASE_URL}/runs/', {
-            'production_plan_id': self.plan.id, 'line_id': self.line_id,
+            'sap_doc_entry': self.sap_doc_entry, 'line_id': self.line_id,
             'date': str(date.today()),
         })
         self.run_id = r.data['id']
@@ -389,7 +378,7 @@ class MaterialUsageTests(BaseTestCase):
         resp = self.client.post(f'{BASE_URL}/lines/', {'name': 'Line-1'})
         self.line_id = resp.data['id']
         r = self.client.post(f'{BASE_URL}/runs/', {
-            'production_plan_id': self.plan.id, 'line_id': self.line_id,
+            'sap_doc_entry': self.sap_doc_entry, 'line_id': self.line_id,
             'date': str(date.today()),
         })
         self.run_id = r.data['id']
@@ -457,7 +446,7 @@ class MachineRuntimeTests(BaseTestCase):
         })
         self.machine_id = resp.data['id']
         r = self.client.post(f'{BASE_URL}/runs/', {
-            'production_plan_id': self.plan.id, 'line_id': self.line_id,
+            'sap_doc_entry': self.sap_doc_entry, 'line_id': self.line_id,
             'date': str(date.today()),
         })
         self.run_id = r.data['id']
@@ -513,7 +502,7 @@ class ManpowerTests(BaseTestCase):
         resp = self.client.post(f'{BASE_URL}/lines/', {'name': 'Line-1'})
         self.line_id = resp.data['id']
         r = self.client.post(f'{BASE_URL}/runs/', {
-            'production_plan_id': self.plan.id, 'line_id': self.line_id,
+            'sap_doc_entry': self.sap_doc_entry, 'line_id': self.line_id,
             'date': str(date.today()),
         })
         self.run_id = r.data['id']
@@ -567,7 +556,7 @@ class LineClearanceTests(BaseTestCase):
         return self.client.post(f'{BASE_URL}/line-clearance/', {
             'date': str(date.today()),
             'line_id': self.line_id,
-            'production_plan_id': self.plan.id,
+            'sap_doc_entry': self.sap_doc_entry,
             'document_id': 'DOC-001',
         })
 
@@ -653,7 +642,7 @@ class WasteLogTests(BaseTestCase):
         resp = self.client.post(f'{BASE_URL}/lines/', {'name': 'Line-1'})
         self.line_id = resp.data['id']
         r = self.client.post(f'{BASE_URL}/runs/', {
-            'production_plan_id': self.plan.id, 'line_id': self.line_id,
+            'sap_doc_entry': self.sap_doc_entry, 'line_id': self.line_id,
             'date': str(date.today()),
         })
         self.run_id = r.data['id']
@@ -728,7 +717,7 @@ class ResourceElectricityTests(BaseTestCase):
         resp = self.client.post(f'{BASE_URL}/lines/', {'name': 'Line-1'})
         self.line_id = resp.data['id']
         r = self.client.post(f'{BASE_URL}/runs/', {
-            'production_plan_id': self.plan.id, 'line_id': self.line_id,
+            'sap_doc_entry': self.sap_doc_entry, 'line_id': self.line_id,
             'date': str(date.today()),
         })
         self.run_id = r.data['id']
@@ -797,7 +786,7 @@ class ResourceWaterTests(BaseTestCase):
         resp = self.client.post(f'{BASE_URL}/lines/', {'name': 'Line-1'})
         self.line_id = resp.data['id']
         r = self.client.post(f'{BASE_URL}/runs/', {
-            'production_plan_id': self.plan.id, 'line_id': self.line_id,
+            'sap_doc_entry': self.sap_doc_entry, 'line_id': self.line_id,
             'date': str(date.today()),
         })
         self.run_id = r.data['id']
@@ -839,7 +828,7 @@ class ResourceGasTests(BaseTestCase):
         resp = self.client.post(f'{BASE_URL}/lines/', {'name': 'Line-1'})
         self.line_id = resp.data['id']
         r = self.client.post(f'{BASE_URL}/runs/', {
-            'production_plan_id': self.plan.id, 'line_id': self.line_id,
+            'sap_doc_entry': self.sap_doc_entry, 'line_id': self.line_id,
             'date': str(date.today()),
         })
         self.run_id = r.data['id']
@@ -880,7 +869,7 @@ class ResourceCompressedAirTests(BaseTestCase):
         resp = self.client.post(f'{BASE_URL}/lines/', {'name': 'Line-1'})
         self.line_id = resp.data['id']
         r = self.client.post(f'{BASE_URL}/runs/', {
-            'production_plan_id': self.plan.id, 'line_id': self.line_id,
+            'sap_doc_entry': self.sap_doc_entry, 'line_id': self.line_id,
             'date': str(date.today()),
         })
         self.run_id = r.data['id']
@@ -921,7 +910,7 @@ class ResourceLabourTests(BaseTestCase):
         resp = self.client.post(f'{BASE_URL}/lines/', {'name': 'Line-1'})
         self.line_id = resp.data['id']
         r = self.client.post(f'{BASE_URL}/runs/', {
-            'production_plan_id': self.plan.id, 'line_id': self.line_id,
+            'sap_doc_entry': self.sap_doc_entry, 'line_id': self.line_id,
             'date': str(date.today()),
         })
         self.run_id = r.data['id']
@@ -985,7 +974,7 @@ class ResourceMachineCostTests(BaseTestCase):
         resp = self.client.post(f'{BASE_URL}/lines/', {'name': 'Line-1'})
         self.line_id = resp.data['id']
         r = self.client.post(f'{BASE_URL}/runs/', {
-            'production_plan_id': self.plan.id, 'line_id': self.line_id,
+            'sap_doc_entry': self.sap_doc_entry, 'line_id': self.line_id,
             'date': str(date.today()),
         })
         self.run_id = r.data['id']
@@ -1028,7 +1017,7 @@ class ResourceOverheadTests(BaseTestCase):
         resp = self.client.post(f'{BASE_URL}/lines/', {'name': 'Line-1'})
         self.line_id = resp.data['id']
         r = self.client.post(f'{BASE_URL}/runs/', {
-            'production_plan_id': self.plan.id, 'line_id': self.line_id,
+            'sap_doc_entry': self.sap_doc_entry, 'line_id': self.line_id,
             'date': str(date.today()),
         })
         self.run_id = r.data['id']
@@ -1087,7 +1076,7 @@ class CostSummaryTests(BaseTestCase):
         resp = self.client.post(f'{BASE_URL}/lines/', {'name': 'Line-1'})
         self.line_id = resp.data['id']
         r = self.client.post(f'{BASE_URL}/runs/', {
-            'production_plan_id': self.plan.id, 'line_id': self.line_id,
+            'sap_doc_entry': self.sap_doc_entry, 'line_id': self.line_id,
             'date': str(date.today()),
         })
         self.run_id = r.data['id']
@@ -1142,7 +1131,7 @@ class InProcessQCTests(BaseTestCase):
         resp = self.client.post(f'{BASE_URL}/lines/', {'name': 'Line-1'})
         self.line_id = resp.data['id']
         r = self.client.post(f'{BASE_URL}/runs/', {
-            'production_plan_id': self.plan.id, 'line_id': self.line_id,
+            'sap_doc_entry': self.sap_doc_entry, 'line_id': self.line_id,
             'date': str(date.today()),
         })
         self.run_id = r.data['id']
@@ -1211,7 +1200,7 @@ class FinalQCTests(BaseTestCase):
         resp = self.client.post(f'{BASE_URL}/lines/', {'name': 'Line-1'})
         self.line_id = resp.data['id']
         r = self.client.post(f'{BASE_URL}/runs/', {
-            'production_plan_id': self.plan.id, 'line_id': self.line_id,
+            'sap_doc_entry': self.sap_doc_entry, 'line_id': self.line_id,
             'date': str(date.today()),
         })
         self.run_id = r.data['id']
@@ -1284,7 +1273,7 @@ class ReportTests(BaseTestCase):
         resp = self.client.post(f'{BASE_URL}/lines/', {'name': 'Line-1'})
         self.line_id = resp.data['id']
         r = self.client.post(f'{BASE_URL}/runs/', {
-            'production_plan_id': self.plan.id, 'line_id': self.line_id,
+            'sap_doc_entry': self.sap_doc_entry, 'line_id': self.line_id,
             'date': str(date.today()),
         })
         self.run_id = r.data['id']

@@ -98,7 +98,7 @@ Content-Type: application/json
 **Create run request:**
 ```json
 {
-    "production_plan_id": 1,
+    "sap_doc_entry": 100,
     "line_id": 1,
     "date": "2026-03-16",
     "brand": "Brand A",
@@ -108,7 +108,9 @@ Content-Type: application/json
 }
 ```
 
-**List response fields:** `id`, `production_plan`, `plan_item_name`, `run_number`, `date`, `line`, `line_name`, `brand`, `pack`, `sap_order_no`, `rated_speed`, `total_production`, `total_breakdown_time`, `status`, `created_by`, `created_at`
+> `sap_doc_entry` is the SAP OWOR `DocEntry` from `GET /sap/orders/`. Production planning is managed entirely in SAP — there is no local production plan.
+
+**List response fields:** `id`, `sap_doc_entry`, `run_number`, `date`, `line`, `line_name`, `brand`, `pack`, `sap_order_no`, `rated_speed`, `total_production`, `total_breakdown_time`, `status`, `created_by`, `created_at`
 
 **Status values:** `DRAFT`, `IN_PROGRESS`, `COMPLETED`
 
@@ -613,12 +615,15 @@ Only one Final QC allowed per run. `POST` returns `400` if already exists. Use `
 
 ### Flow 1: Start a Production Run
 
+> Production planning is done entirely in SAP. Use `GET /sap/orders/` to fetch released SAP production orders, then link them to runs via `sap_doc_entry`.
+
 ```
-1. GET /sap/orders/          → pick SAP order
-2. POST /runs/               → create run linked to sap_order_no
-3. POST /runs/{id}/logs/     → log hourly production (repeat each hour)
-4. POST /runs/{id}/breakdowns/  → log breakdowns (if any)
-5. POST /runs/{id}/complete/ → mark complete
+1. GET /sap/orders/          → fetch released SAP production orders (OWOR)
+2. POST /runs/               → create run with sap_doc_entry from SAP order
+3. POST /line-clearance/     → create line clearance for the run (optional)
+4. POST /runs/{id}/logs/     → log hourly production (repeat each hour)
+5. POST /runs/{id}/breakdowns/  → log breakdowns (if any)
+6. POST /runs/{id}/complete/ → mark complete
 ```
 
 ### Flow 2: Record Resource Costs

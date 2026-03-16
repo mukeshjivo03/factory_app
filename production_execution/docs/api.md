@@ -42,7 +42,7 @@
 
 | Method | URL | Permission | Description |
 |--------|-----|------------|-------------|
-| GET | `/runs/` | `can_view_production_run` | List runs. Filter: `?date=&line_id=&status=&production_plan_id=` |
+| GET | `/runs/` | `can_view_production_run` | List runs. Filter: `?date=&line_id=&status=&sap_doc_entry=` |
 | POST | `/runs/` | `can_create_production_run` | Create run. `run_number` auto-incremented |
 | GET | `/runs/<id>/` | `can_view_production_run` | Run detail (includes logs, breakdowns) |
 | PATCH | `/runs/<id>/` | `can_edit_production_run` | Update (DRAFT/IN_PROGRESS only) |
@@ -51,7 +51,7 @@
 **Create run body:**
 ```json
 {
-  "production_plan_id": 5,
+  "sap_doc_entry": 100,
   "line_id": 1,
   "date": "2026-03-07",
   "brand": "Extra Light",
