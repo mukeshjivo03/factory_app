@@ -77,7 +77,7 @@ class HanaPlanDashboardReader:
                 T0."DocEntry"                       AS prod_order_entry,
                 T0."DocNum"                         AS prod_order_num,
                 T0."ItemCode"                       AS sku_code,
-                IFNULL(T0."Dscription", '')         AS sku_name,
+                IFNULL(T0."ProdName", '')           AS sku_name,
                 T0."PlannedQty"                     AS planned_qty,
                 T0."CmpltQty"                       AS completed_qty,
                 T0."Status"                         AS status,
@@ -103,7 +103,7 @@ class HanaPlanDashboardReader:
                 ON T1."ItemCode" = T2."ItemCode"
             WHERE {' AND '.join(where_clauses)}
             GROUP BY
-                T0."DocEntry", T0."DocNum", T0."ItemCode", T0."Dscription",
+                T0."DocEntry", T0."DocNum", T0."ItemCode", T0."ProdName",
                 T0."PlannedQty", T0."CmpltQty", T0."Status",
                 T0."DueDate", T0."PostDate", T0."Priority", T0."Warehouse"
             ORDER BY
@@ -127,7 +127,7 @@ class HanaPlanDashboardReader:
                 T0."DocEntry"                                               AS prod_order_entry,
                 T0."DocNum"                                                 AS prod_order_num,
                 T0."ItemCode"                                               AS sku_code,
-                IFNULL(T0."Dscription", '')                                 AS sku_name,
+                IFNULL(T0."ProdName", '')                                   AS sku_name,
                 T0."PlannedQty"                                             AS sku_planned_qty,
                 T0."CmpltQty"                                               AS sku_completed_qty,
                 T0."Status"                                                 AS prod_order_status,
@@ -141,9 +141,9 @@ class HanaPlanDashboardReader:
                 IFNULL(T1."PlannedQty", 0)                                 AS component_planned_qty,
                 IFNULL(T1."IssuedQty", 0)                                  AS component_issued_qty,
                 (IFNULL(T1."PlannedQty", 0) - IFNULL(T1."IssuedQty", 0))  AS component_remaining_qty,
-                IFNULL(T1."Warehouse", '')                                  AS component_warehouse,
+                IFNULL(T1."wareHouse", '')                                  AS component_warehouse,
                 IFNULL(T1."BaseQty", 0)                                    AS base_qty,
-                IFNULL(T1."unitMsr", '')                                    AS uom,
+                IFNULL(T1."UomCode", '')                                    AS uom,
                 IFNULL(T2."OnHand", 0)                                     AS stock_on_hand,
                 IFNULL(T2."IsCommited", 0)                                 AS stock_committed,
                 IFNULL(T2."OnOrder", 0)                                    AS stock_on_order,
