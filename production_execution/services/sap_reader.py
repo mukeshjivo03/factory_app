@@ -26,7 +26,7 @@ class ProductionOrderReader:
                 W."DocEntry",
                 W."DocNum",
                 W."ItemCode",
-                W."ItemName",
+                W."ProdName",
                 W."PlannedQty",
                 W."CmpltQty",
                 W."RjctQty",
@@ -52,7 +52,7 @@ class ProductionOrderReader:
 
         header_sql = """
             SELECT
-                W."DocEntry", W."DocNum", W."ItemCode", W."ItemName",
+                W."DocEntry", W."DocNum", W."ItemCode", W."ProdName",
                 W."PlannedQty", W."CmpltQty", W."RjctQty",
                 (W."PlannedQty" - W."CmpltQty" - W."RjctQty") AS "RemainingQty",
                 W."StartDate", W."DueDate", W."Warehouse", W."Status"
