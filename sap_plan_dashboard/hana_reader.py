@@ -77,7 +77,7 @@ class HanaPlanDashboardReader:
                 T0."DocEntry"                       AS prod_order_entry,
                 T0."DocNum"                         AS prod_order_num,
                 T0."ItemCode"                       AS sku_code,
-                T0."ItemName"                       AS sku_name,
+                IFNULL(T0."Dscription", '')         AS sku_name,
                 T0."PlannedQty"                     AS planned_qty,
                 T0."CmpltQty"                       AS completed_qty,
                 T0."Status"                         AS status,
@@ -103,7 +103,7 @@ class HanaPlanDashboardReader:
                 ON T1."ItemCode" = T2."ItemCode"
             WHERE {' AND '.join(where_clauses)}
             GROUP BY
-                T0."DocEntry", T0."DocNum", T0."ItemCode", T0."ItemName",
+                T0."DocEntry", T0."DocNum", T0."ItemCode", T0."Dscription",
                 T0."PlannedQty", T0."CmpltQty", T0."Status",
                 T0."DueDate", T0."PostDate", T0."Priority", T0."Warehouse"
             ORDER BY
@@ -127,7 +127,7 @@ class HanaPlanDashboardReader:
                 T0."DocEntry"                                               AS prod_order_entry,
                 T0."DocNum"                                                 AS prod_order_num,
                 T0."ItemCode"                                               AS sku_code,
-                T0."ItemName"                                               AS sku_name,
+                IFNULL(T0."Dscription", '')                                 AS sku_name,
                 T0."PlannedQty"                                             AS sku_planned_qty,
                 T0."CmpltQty"                                               AS sku_completed_qty,
                 T0."Status"                                                 AS prod_order_status,
@@ -143,7 +143,7 @@ class HanaPlanDashboardReader:
                 (IFNULL(T1."PlannedQty", 0) - IFNULL(T1."IssuedQty", 0))  AS component_remaining_qty,
                 IFNULL(T1."Warehouse", '')                                  AS component_warehouse,
                 IFNULL(T1."BaseQty", 0)                                    AS base_qty,
-                IFNULL(T1."UomCode", '')                                    AS uom,
+                IFNULL(T1."unitMsr", '')                                    AS uom,
                 IFNULL(T2."OnHand", 0)                                     AS stock_on_hand,
                 IFNULL(T2."IsCommited", 0)                                 AS stock_committed,
                 IFNULL(T2."OnOrder", 0)                                    AS stock_on_order,
@@ -208,8 +208,9 @@ class HanaPlanDashboardReader:
             clauses.append(f'{table_alias}."ItemCode" = ?')
             params.append(filters["sku"])
 
-        # Always filter: inventory items only, exclude resources
-        clauses.append("T1.\"ItemType\" = 'I'")
+        # Always filter: inventory items only (ItemType 4 = Item in SAP B1 WOR1),
+        # exclude resources (288) and non-inventory items
+        clauses.append('T1."ItemType" = 4')
         clauses.append("T2.\"InvntItem\" = 'Y'")
 
         return clauses, params
