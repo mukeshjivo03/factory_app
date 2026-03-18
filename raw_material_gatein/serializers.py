@@ -74,4 +74,6 @@ class POReceiptSerializer(serializers.Serializer):
     po_number = serializers.CharField()
     supplier_code = serializers.CharField()
     supplier_name = serializers.CharField()
+    created_at = serializers.DateTimeField(read_only=True)
+    updated_at = serializers.DateTimeField(read_only=True)
     items = POItemReceiptSerializer(many=True)

@@ -18,9 +18,13 @@ class SecurityCheckSerializer(serializers.ModelSerializer):
             "inspection_time",
             "remarks",
             "is_submitted",
+            "created_at",
+            "updated_at",
         ]
         read_only_fields = (
             "id",
             "inspection_time",
             "is_submitted",
+            "created_at",
+            "updated_at",
         )

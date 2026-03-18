@@ -117,6 +117,7 @@ class ConstructionGateEntry(models.Model):
         related_name="construction_entries"
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["-created_at"]
