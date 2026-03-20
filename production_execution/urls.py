@@ -6,10 +6,12 @@ from .views import (
     ChecklistTemplateListCreateAPI, ChecklistTemplateDetailAPI,
     # Production Runs
     RunListCreateAPI, RunDetailAPI, CompleteRunAPI,
-    # Hourly Logs
-    RunLogListCreateAPI, RunLogDetailAPI,
     # Breakdowns
     BreakdownListCreateAPI, BreakdownDetailAPI,
+    BreakdownCategoryListCreateAPI, BreakdownCategoryDetailAPI,
+    # Timeline Actions
+    StartProductionAPI, StopProductionAPI, AddBreakdownAPI, ResolveBreakdownAPI,
+    SegmentUpdateAPI, BreakdownUpdateAPI,
     # Material Usage
     MaterialUsageListCreateAPI, MaterialUsageDetailAPI,
     # Machine Runtime
@@ -29,6 +31,22 @@ from .views import (
     # Reports
     DailyProductionReportAPI, YieldReportAPI,
     LineClearanceReportAPI, AnalyticsAPI,
+    # SAP Orders
+    SAPProductionOrderListAPI, SAPProductionOrderDetailAPI, SAPItemSearchAPI,
+    # Resource Tracking
+    ResourceElectricityListCreateAPI, ResourceElectricityDetailAPI,
+    ResourceWaterListCreateAPI, ResourceWaterDetailAPI,
+    ResourceGasListCreateAPI, ResourceGasDetailAPI,
+    ResourceCompressedAirListCreateAPI, ResourceCompressedAirDetailAPI,
+    ResourceLabourListCreateAPI, ResourceLabourDetailAPI,
+    ResourceMachineCostListCreateAPI, ResourceMachineCostDetailAPI,
+    ResourceOverheadListCreateAPI, ResourceOverheadDetailAPI,
+    # Cost
+    RunCostSummaryAPI, CostAnalyticsAPI,
+    # QC
+    InProcessQCListCreateAPI, InProcessQCDetailAPI, FinalQCCheckAPI,
+    # Extended Analytics
+    OEEAnalyticsAPI, DowntimeAnalyticsAPI, WasteAnalyticsAPI,
 )
 
 urlpatterns = [
@@ -58,10 +76,20 @@ urlpatterns = [
     path('runs/<int:run_id>/complete/', CompleteRunAPI.as_view(), name='pe-run-complete'),
 
     # ------------------------------------------------------------------
-    # Hourly Production Logs
+    # Breakdown Categories
     # ------------------------------------------------------------------
-    path('runs/<int:run_id>/logs/', RunLogListCreateAPI.as_view(), name='pe-run-log-list-create'),
-    path('runs/<int:run_id>/logs/<int:log_id>/', RunLogDetailAPI.as_view(), name='pe-run-log-detail'),
+    path('breakdown-categories/', BreakdownCategoryListCreateAPI.as_view(), name='pe-breakdown-category-list'),
+    path('breakdown-categories/<int:category_id>/', BreakdownCategoryDetailAPI.as_view(), name='pe-breakdown-category-detail'),
+
+    # ------------------------------------------------------------------
+    # Timeline Actions
+    # ------------------------------------------------------------------
+    path('runs/<int:run_id>/start-production/', StartProductionAPI.as_view(), name='pe-start-production'),
+    path('runs/<int:run_id>/stop-production/', StopProductionAPI.as_view(), name='pe-stop-production'),
+    path('runs/<int:run_id>/add-breakdown/', AddBreakdownAPI.as_view(), name='pe-add-breakdown'),
+    path('runs/<int:run_id>/breakdowns/<int:breakdown_id>/resolve/', ResolveBreakdownAPI.as_view(), name='pe-resolve-breakdown'),
+    path('runs/<int:run_id>/segments/<int:segment_id>/', SegmentUpdateAPI.as_view(), name='pe-segment-update'),
+    path('runs/<int:run_id>/breakdowns/<int:breakdown_id>/update/', BreakdownUpdateAPI.as_view(), name='pe-breakdown-update'),
 
     # ------------------------------------------------------------------
     # Machine Breakdowns
@@ -119,4 +147,73 @@ urlpatterns = [
     path('reports/yield/<int:run_id>/', YieldReportAPI.as_view(), name='pe-report-yield'),
     path('reports/line-clearance/', LineClearanceReportAPI.as_view(), name='pe-report-clearance'),
     path('reports/analytics/', AnalyticsAPI.as_view(), name='pe-report-analytics'),
+
+    # ------------------------------------------------------------------
+    # SAP Orders (proxy)
+    # ------------------------------------------------------------------
+    path('sap/orders/', SAPProductionOrderListAPI.as_view(), name='pe-sap-orders'),
+    path('sap/orders/<int:doc_entry>/', SAPProductionOrderDetailAPI.as_view(), name='pe-sap-order-detail'),
+    path('sap/items/', SAPItemSearchAPI.as_view(), name='pe-sap-items'),
+
+    # ------------------------------------------------------------------
+    # Resource Tracking — Electricity
+    # ------------------------------------------------------------------
+    path('runs/<int:run_id>/resources/electricity/', ResourceElectricityListCreateAPI.as_view(), name='pe-resource-electricity-list'),
+    path('runs/<int:run_id>/resources/electricity/<int:entry_id>/', ResourceElectricityDetailAPI.as_view(), name='pe-resource-electricity-detail'),
+
+    # ------------------------------------------------------------------
+    # Resource Tracking — Water
+    # ------------------------------------------------------------------
+    path('runs/<int:run_id>/resources/water/', ResourceWaterListCreateAPI.as_view(), name='pe-resource-water-list'),
+    path('runs/<int:run_id>/resources/water/<int:entry_id>/', ResourceWaterDetailAPI.as_view(), name='pe-resource-water-detail'),
+
+    # ------------------------------------------------------------------
+    # Resource Tracking — Gas
+    # ------------------------------------------------------------------
+    path('runs/<int:run_id>/resources/gas/', ResourceGasListCreateAPI.as_view(), name='pe-resource-gas-list'),
+    path('runs/<int:run_id>/resources/gas/<int:entry_id>/', ResourceGasDetailAPI.as_view(), name='pe-resource-gas-detail'),
+
+    # ------------------------------------------------------------------
+    # Resource Tracking — Compressed Air
+    # ------------------------------------------------------------------
+    path('runs/<int:run_id>/resources/compressed-air/', ResourceCompressedAirListCreateAPI.as_view(), name='pe-resource-air-list'),
+    path('runs/<int:run_id>/resources/compressed-air/<int:entry_id>/', ResourceCompressedAirDetailAPI.as_view(), name='pe-resource-air-detail'),
+
+    # ------------------------------------------------------------------
+    # Resource Tracking — Labour
+    # ------------------------------------------------------------------
+    path('runs/<int:run_id>/resources/labour/', ResourceLabourListCreateAPI.as_view(), name='pe-resource-labour-list'),
+    path('runs/<int:run_id>/resources/labour/<int:entry_id>/', ResourceLabourDetailAPI.as_view(), name='pe-resource-labour-detail'),
+
+    # ------------------------------------------------------------------
+    # Resource Tracking — Machine Costs
+    # ------------------------------------------------------------------
+    path('runs/<int:run_id>/resources/machine-costs/', ResourceMachineCostListCreateAPI.as_view(), name='pe-resource-machine-list'),
+    path('runs/<int:run_id>/resources/machine-costs/<int:entry_id>/', ResourceMachineCostDetailAPI.as_view(), name='pe-resource-machine-detail'),
+
+    # ------------------------------------------------------------------
+    # Resource Tracking — Overhead
+    # ------------------------------------------------------------------
+    path('runs/<int:run_id>/resources/overhead/', ResourceOverheadListCreateAPI.as_view(), name='pe-resource-overhead-list'),
+    path('runs/<int:run_id>/resources/overhead/<int:entry_id>/', ResourceOverheadDetailAPI.as_view(), name='pe-resource-overhead-detail'),
+
+    # ------------------------------------------------------------------
+    # Cost Summary
+    # ------------------------------------------------------------------
+    path('runs/<int:run_id>/cost/', RunCostSummaryAPI.as_view(), name='pe-run-cost'),
+    path('costs/analytics/', CostAnalyticsAPI.as_view(), name='pe-cost-analytics'),
+
+    # ------------------------------------------------------------------
+    # QC Checks
+    # ------------------------------------------------------------------
+    path('runs/<int:run_id>/qc/inprocess/', InProcessQCListCreateAPI.as_view(), name='pe-qc-inprocess-list'),
+    path('runs/<int:run_id>/qc/inprocess/<int:check_id>/', InProcessQCDetailAPI.as_view(), name='pe-qc-inprocess-detail'),
+    path('runs/<int:run_id>/qc/final/', FinalQCCheckAPI.as_view(), name='pe-qc-final'),
+
+    # ------------------------------------------------------------------
+    # Extended Analytics
+    # ------------------------------------------------------------------
+    path('reports/analytics/oee/', OEEAnalyticsAPI.as_view(), name='pe-analytics-oee'),
+    path('reports/analytics/downtime/', DowntimeAnalyticsAPI.as_view(), name='pe-analytics-downtime'),
+    path('reports/analytics/waste/', WasteAnalyticsAPI.as_view(), name='pe-analytics-waste'),
 ]

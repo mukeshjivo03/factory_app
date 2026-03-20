@@ -565,7 +565,7 @@ GET /runs/
 | `date` | `string` | `YYYY-MM-DD` format |
 | `line_id` | `integer` | Filter by line |
 | `status` | `string` | `DRAFT`, `IN_PROGRESS`, or `COMPLETED` |
-| `production_plan_id` | `integer` | Filter by production plan |
+| `sap_doc_entry` | `integer` | Filter by SAP OWOR DocEntry |
 
 **Response: `200 OK`**
 
@@ -573,8 +573,7 @@ GET /runs/
 [
   {
     "id": 1,
-    "production_plan": 5,
-    "plan_item_name": "Extra Light 1L",
+    "sap_doc_entry": 100,
     "run_number": 1,
     "date": "2026-03-07",
     "line": 1,
@@ -604,7 +603,7 @@ POST /runs/
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `production_plan_id` | `integer` | Yes | FK to production plan (must be OPEN or IN_PROGRESS) |
+| `sap_doc_entry` | `integer` | No | SAP OWOR DocEntry (from SAP production order) |
 | `line_id` | `integer` | Yes | FK to production line (must be active) |
 | `date` | `string` | Yes | `YYYY-MM-DD` format |
 | `brand` | `string` | No | Brand name (default: `""`) |
@@ -614,7 +613,7 @@ POST /runs/
 
 ```json
 {
-  "production_plan_id": 5,
+  "sap_doc_entry": 100,
   "line_id": 1,
   "date": "2026-03-07",
   "brand": "Extra Light",
@@ -627,8 +626,8 @@ POST /runs/
 **Response: `201 Created`** — Returns full run detail object (see Get Run Detail below).
 
 **Business Rules:**
-- `production_plan_id` must reference a plan with status `OPEN` or `IN_PROGRESS`. If the plan is `DRAFT`, response will be `400` with `"Cannot start a run for a plan with status 'DRAFT'."`.
-- `run_number` is auto-incremented per plan+date combination. No need to send it.
+- `sap_doc_entry` is the SAP OWOR `DocEntry` fetched from `GET /sap/orders/`. It links the run directly to the SAP production order.
+- `run_number` is auto-incremented per SAP order+date combination. No need to send it.
 - Status is always set to `DRAFT` on creation.
 
 ### Get Run Detail
@@ -644,8 +643,7 @@ GET /runs/{run_id}/
 ```json
 {
   "id": 1,
-  "production_plan": 5,
-  "plan_item_name": "Extra Light 1L",
+  "sap_doc_entry": 100,
   "run_number": 1,
   "date": "2026-03-07",
   "line": 1,
@@ -1258,7 +1256,7 @@ GET /line-clearance/
     "date": "2026-03-07",
     "line": 1,
     "line_name": "Line-1",
-    "production_plan": 5,
+    "sap_doc_entry": 100,
     "document_id": "PRD-OIL-FRM-15-00-00-04",
     "status": "DRAFT",
     "qa_approved": false,
@@ -1282,14 +1280,14 @@ POST /line-clearance/
 |-------|------|----------|-------------|
 | `date` | `string` | Yes | `YYYY-MM-DD` |
 | `line_id` | `integer` | Yes | FK to production line |
-| `production_plan_id` | `integer` | Yes | FK to production plan |
+| `sap_doc_entry` | `integer` | No | SAP OWOR DocEntry (from SAP production order) |
 | `document_id` | `string` | No | Form/document reference (default: `""`) |
 
 ```json
 {
   "date": "2026-03-07",
   "line_id": 1,
-  "production_plan_id": 5,
+  "sap_doc_entry": 100,
   "document_id": "PRD-OIL-FRM-15-00-00-04"
 }
 ```
@@ -1304,7 +1302,7 @@ POST /line-clearance/
   "date": "2026-03-07",
   "line": 1,
   "line_name": "Line-1",
-  "production_plan": 5,
+  "sap_doc_entry": 100,
   "document_id": "PRD-OIL-FRM-15-00-00-04",
   "verified_by": null,
   "qa_approved": false,
@@ -1798,8 +1796,7 @@ GET /reports/daily-production/?date=2026-03-07
 [
   {
     "id": 1,
-    "production_plan": 5,
-    "plan_item_name": "Extra Light 1L",
+    "sap_doc_entry": 100,
     "run_number": 1,
     "date": "2026-03-07",
     "line": 1,
@@ -1836,8 +1833,7 @@ GET /reports/yield/{run_id}/
 {
   "run": {
     "id": 1,
-    "production_plan": 5,
-    "plan_item_name": "Extra Light 1L",
+    "sap_doc_entry": 100,
     "run_number": 1,
     "date": "2026-03-07",
     "line": 1,
@@ -1912,7 +1908,7 @@ GET /reports/line-clearance/
     "date": "2026-03-07",
     "line": 1,
     "line_name": "Line-1",
-    "production_plan": 5,
+    "sap_doc_entry": 100,
     "document_id": "PRD-OIL-FRM-15-00-00-04",
     "status": "CLEARED",
     "qa_approved": true,

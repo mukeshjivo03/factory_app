@@ -8,9 +8,11 @@
 
 ## Overview
 
-This module handles everything **after** a Production Plan/Order is created — from line clearance before production begins, through hourly production logging, material consumption, machine runtime, breakdowns, maintenance checklists, waste management, and manpower tracking.
+This module handles everything **after** a SAP Production Order (OWOR) is released — from line clearance before production begins, through hourly production logging, material consumption, machine runtime, breakdowns, maintenance checklists, waste management, and manpower tracking.
 
-**Depends on:** `production_planning`, `company`
+> **Production planning is done entirely in SAP.** Runs are linked directly to SAP OWOR orders via `sap_doc_entry` (the SAP DocEntry integer). Use `GET /api/v1/production-execution/sap/orders/` to fetch released SAP orders.
+
+**Depends on:** `company`
 
 ---
 
@@ -69,8 +71,8 @@ production_execution/
 
 ## Key Business Rules
 
-1. **Production Run auto-increments** `run_number` per plan+date
-2. **Plan must be OPEN or IN_PROGRESS** to start a run
+1. **Production Run auto-increments** `run_number` per `sap_doc_entry`+date
+2. **`sap_doc_entry`** links a run to the SAP OWOR — no local plan required
 3. **COMPLETED runs are locked** — no edits allowed
 4. **Material wastage auto-calculated**: `opening + issued - closing`
 5. **Line Clearance flow**: DRAFT → SUBMITTED → CLEARED/NOT_CLEARED
