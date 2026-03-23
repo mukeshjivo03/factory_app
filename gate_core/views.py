@@ -186,6 +186,7 @@ class RawMaterialGateEntryFullView(APIView):
                 "remarks": sc.remarks,
                 "inspected_by": sc.inspected_by_name,
                 "created_at": sc.created_at,
+                "updated_at": sc.updated_at,
             }
 
         # -------------------------
@@ -200,6 +201,7 @@ class RawMaterialGateEntryFullView(APIView):
                 "net_weight": float(w.net_weight) if w.net_weight else None,
                 "weighbridge_slip_no": w.weighbridge_slip_no,
                 "created_at": w.created_at,
+                "updated_at": w.updated_at,
             }
 
         # -------------------------
@@ -376,6 +378,7 @@ class DailyNeedGateEntryFullView(APIView):
                 "status": entry.status,
                 "is_locked": entry.is_locked,
                 "created_at": entry.created_at,
+                "updated_at": entry.updated_at,
                 "entry_type": entry.entry_type,
             },
 
@@ -449,6 +452,7 @@ class DailyNeedGateEntryFullView(APIView):
                     if daily.created_by else None
                 ),
                 "created_at": daily.created_at,
+                "updated_at": daily.updated_at,
             }
 
         return Response(response)
@@ -497,6 +501,7 @@ class MaintenanceGateEntryFullView(APIView):
                 "status": entry.status,
                 "is_locked": entry.is_locked,
                 "created_at": entry.created_at,
+                "updated_at": entry.updated_at,
                 "entry_type": entry.entry_type,
             },
 
@@ -571,6 +576,7 @@ class MaintenanceGateEntryFullView(APIView):
                     if maintenance.created_by else None
                 ),
                 "created_at": maintenance.created_at,
+                "updated_at": maintenance.updated_at,
             }
 
         return Response(response)
@@ -618,6 +624,7 @@ class ConstructionGateEntryFullView(APIView):
                 "status": entry.status,
                 "is_locked": entry.is_locked,
                 "created_at": entry.created_at,
+                "updated_at": entry.updated_at,
                 "entry_type": entry.entry_type,
             },
 
@@ -690,6 +697,7 @@ class ConstructionGateEntryFullView(APIView):
                     if construction.created_by else None
                 ),
                 "created_at": construction.created_at,
+                "updated_at": construction.updated_at,
             }
 
         return Response(response)

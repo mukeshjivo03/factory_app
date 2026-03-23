@@ -77,11 +77,15 @@ class VehicleEntrySerializer(serializers.ModelSerializer):
             "entry_time",
             "entry_type",
             "remarks",
+            "created_at",
+            "updated_at",
         ]
         read_only_fields = (
             "id",
             "status",
             "entry_time",
+            "created_at",
+            "updated_at",
         )
 
     def to_representation(self, instance):

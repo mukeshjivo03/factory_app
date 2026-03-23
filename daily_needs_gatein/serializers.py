@@ -7,7 +7,8 @@ class DailyNeedGateEntrySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = DailyNeedGateEntry
-        exclude = ("created_by", "created_at", "vehicle_entry")
+        exclude = ("created_by", "vehicle_entry")
+        read_only_fields = ("created_at", "updated_at")
 
     def validate_quantity(self, value):
         if value is None or value <= 0:
