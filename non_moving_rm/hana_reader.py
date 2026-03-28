@@ -44,7 +44,7 @@ class HanaNonMovingRMReader:
             List of dicts with non-moving item details.
         """
         schema = self.connection.schema
-        query = f'CALL "{schema}"."REPORT_BP_NON_MOVING_RM"(?, ?)'
+        query = f'CALL "{schema}"."REPORT_BP_NON_MOVING_RM1"(?, ?)'
         params = [age, item_group]
 
         rows = self._execute(query, params)
