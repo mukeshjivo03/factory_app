@@ -229,6 +229,27 @@ class ProductionRun(models.Model):
         help_text="Reworked quantity from QC failures"
     )
 
+    # SAP Goods Receipt sync fields
+    sap_receipt_doc_entry = models.IntegerField(
+        null=True, blank=True,
+        help_text="SAP Goods Receipt DocEntry after successful post"
+    )
+    sap_sync_status = models.CharField(
+        max_length=20,
+        choices=[
+            ('NOT_APPLICABLE', 'Not Applicable'),
+            ('PENDING', 'Pending'),
+            ('SUCCESS', 'Success'),
+            ('FAILED', 'Failed'),
+        ],
+        default='NOT_APPLICABLE',
+        help_text="SAP goods receipt sync status"
+    )
+    sap_sync_error = models.TextField(
+        blank=True, default='',
+        help_text="Error message if SAP goods receipt post fails"
+    )
+
     status = models.CharField(
         max_length=20, choices=RunStatus.choices, default=RunStatus.DRAFT
     )

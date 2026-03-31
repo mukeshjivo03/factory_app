@@ -84,7 +84,7 @@ class ProductionOrderReader:
         components_sql = """
             SELECT
                 C."ItemCode", C."ItemName", C."PlannedQty",
-                C."IssuedQty", C."Warehouse", C."UomCode"
+                C."IssuedQty", C."wareHouse" AS "Warehouse", C."UomCode"
             FROM "{schema}"."WOR1" C
             WHERE C."DocEntry" = {val}
         """.format(schema=schema, val=int(actual_doc_entry))

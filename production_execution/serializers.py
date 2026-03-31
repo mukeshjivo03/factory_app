@@ -134,6 +134,7 @@ class ProductionRunListSerializer(serializers.ModelSerializer):
             'line', 'line_name', 'product', 'rated_speed',
             'total_production', 'total_running_minutes', 'total_breakdown_time',
             'rejected_qty', 'reworked_qty',
+            'sap_receipt_doc_entry', 'sap_sync_status', 'sap_sync_error',
             'status', 'live_status', 'created_by', 'created_at',
         ]
 
@@ -206,6 +207,7 @@ class ProductionRunDetailSerializer(serializers.ModelSerializer):
             'labour_count', 'other_manpower_count', 'supervisor', 'operators',
             'total_production', 'total_running_minutes', 'total_breakdown_time',
             'rejected_qty', 'reworked_qty',
+            'sap_receipt_doc_entry', 'sap_sync_status', 'sap_sync_error',
             'status', 'created_by', 'created_at', 'updated_at',
             'segments', 'breakdowns', 'machine_ids',
         ]

@@ -5,7 +5,7 @@ from .views import (
     MachineListCreateAPI, MachineDetailAPI,
     ChecklistTemplateListCreateAPI, ChecklistTemplateDetailAPI,
     # Production Runs
-    RunListCreateAPI, RunDetailAPI, CompleteRunAPI,
+    RunListCreateAPI, RunDetailAPI, CompleteRunAPI, RetrySAPGoodsReceiptAPI,
     # Breakdowns
     BreakdownListCreateAPI, BreakdownDetailAPI,
     BreakdownCategoryListCreateAPI, BreakdownCategoryDetailAPI,
@@ -81,6 +81,7 @@ urlpatterns = [
     path('runs/', RunListCreateAPI.as_view(), name='pe-run-list-create'),
     path('runs/<int:run_id>/', RunDetailAPI.as_view(), name='pe-run-detail'),
     path('runs/<int:run_id>/complete/', CompleteRunAPI.as_view(), name='pe-run-complete'),
+    path('runs/<int:run_id>/retry-sap-receipt/', RetrySAPGoodsReceiptAPI.as_view(), name='pe-run-retry-sap'),
 
     # ------------------------------------------------------------------
     # Breakdown Categories

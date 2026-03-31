@@ -522,6 +522,19 @@ class CompleteRunAPI(APIView):
         return Response(ProductionRunDetailSerializer(run).data)
 
 
+class RetrySAPGoodsReceiptAPI(APIView):
+    """Retry posting goods receipt to SAP for a failed production run."""
+    permission_classes = [IsAuthenticated, HasCompanyContext, CanCompleteProductionRun]
+
+    def post(self, request, run_id):
+        service = _get_service(request)
+        try:
+            run = service.retry_sap_goods_receipt(run_id)
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(ProductionRunDetailSerializer(run).data)
+
+
 # ===========================================================================
 # MACHINE BREAKDOWNS
 # ===========================================================================
