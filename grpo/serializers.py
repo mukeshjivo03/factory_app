@@ -21,6 +21,7 @@ class GRPOLineDetailSerializer(serializers.Serializer):
     tax_code = serializers.CharField(allow_blank=True)
     warehouse_code = serializers.CharField(allow_blank=True)
     gl_account = serializers.CharField(allow_blank=True)
+    variety = serializers.CharField(allow_blank=True)
     sap_line_num = serializers.IntegerField(allow_null=True)
 
 
