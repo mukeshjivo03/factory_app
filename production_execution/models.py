@@ -229,6 +229,20 @@ class ProductionRun(models.Model):
         help_text="Reworked quantity from QC failures"
     )
 
+    # SAP sync fields
+    sap_receipt_doc_entry = models.IntegerField(
+        null=True, blank=True,
+        help_text="SAP receipt DocEntry after production is synced"
+    )
+    sap_sync_status = models.CharField(
+        max_length=20, blank=True, default='',
+        help_text="SAP sync status (e.g. PENDING, SUCCESS, FAILED)"
+    )
+    sap_sync_error = models.TextField(
+        blank=True, default='',
+        help_text="Error message from last SAP sync attempt"
+    )
+
     status = models.CharField(
         max_length=20, choices=RunStatus.choices, default=RunStatus.DRAFT
     )
