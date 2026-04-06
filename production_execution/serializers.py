@@ -87,6 +87,9 @@ class ProductionRunCreateSerializer(serializers.Serializer):
     line_id = serializers.IntegerField()
     date = serializers.DateField()
     product = serializers.CharField(max_length=200, required=False, allow_blank=True, default='')
+    required_qty = serializers.DecimalField(
+        max_digits=12, decimal_places=2, required=False, allow_null=True
+    )
     rated_speed = serializers.DecimalField(
         max_digits=10, decimal_places=2, required=False, allow_null=True
     )
@@ -131,10 +134,11 @@ class ProductionRunListSerializer(serializers.ModelSerializer):
         model = ProductionRun
         fields = [
             'id', 'sap_doc_entry', 'run_number', 'date',
-            'line', 'line_name', 'product', 'rated_speed',
+            'line', 'line_name', 'product', 'required_qty', 'rated_speed',
             'total_production', 'total_running_minutes', 'total_breakdown_time',
             'rejected_qty', 'reworked_qty',
             'sap_receipt_doc_entry', 'sap_sync_status', 'sap_sync_error',
+            'warehouse_approval_status',
             'status', 'live_status', 'created_by', 'created_at',
         ]
 
@@ -203,11 +207,12 @@ class ProductionRunDetailSerializer(serializers.ModelSerializer):
         model = ProductionRun
         fields = [
             'id', 'sap_doc_entry', 'run_number', 'date',
-            'line', 'line_name', 'product', 'rated_speed',
+            'line', 'line_name', 'product', 'required_qty', 'rated_speed',
             'labour_count', 'other_manpower_count', 'supervisor', 'operators',
             'total_production', 'total_running_minutes', 'total_breakdown_time',
             'rejected_qty', 'reworked_qty',
             'sap_receipt_doc_entry', 'sap_sync_status', 'sap_sync_error',
+            'warehouse_approval_status',
             'status', 'created_by', 'created_at', 'updated_at',
             'segments', 'breakdowns', 'machine_ids',
         ]

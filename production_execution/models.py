@@ -188,6 +188,22 @@ class ProductionRun(models.Model):
         max_length=200, blank=True, default='',
         help_text="Product name (auto-filled from SAP ItemName)"
     )
+    required_qty = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True,
+        help_text="Required production quantity — BOM scales to this"
+    )
+    warehouse_approval_status = models.CharField(
+        max_length=25,
+        choices=[
+            ('NOT_REQUESTED', 'Not Requested'),
+            ('PENDING', 'Pending'),
+            ('APPROVED', 'Approved'),
+            ('PARTIALLY_APPROVED', 'Partially Approved'),
+            ('REJECTED', 'Rejected'),
+        ],
+        default='NOT_REQUESTED',
+        help_text="Warehouse BOM approval status"
+    )
     rated_speed = models.DecimalField(
         max_digits=10, decimal_places=2, null=True, blank=True,
         help_text="Rated speed (cases/hr)"

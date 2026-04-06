@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bash -c \"python manage.py check 2>&1\")",
+      "Bash(bash -c \"python test_warehouse_integration.py 2>&1 | grep -E 'PASS|FAIL|WARN|SKIP|SUMMARY' | tail -20\")",
+      "Bash(python test_sap_live.py)",
+      "Bash(python -c ':*)",
+      "Bash(find /d/Factory/factory_app -type f -name \"*.py\" -not -path \"*/.venv/*\" -exec grep -l \"ItemCode\\\\|item_code\\\\|OITM\" {} \\\\;)",
+      "Bash(find /d/Factory/factory_app -type f -name \"*.py\" -not -path \"*/.venv/*\" -exec grep -l \"ItemCode.*create\\\\|create.*ItemCode\\\\|Item.*Master\\\\|imc\" {} \\\\;)",
+      "Bash(xargs grep:*)"
+    ]
+  }
+}

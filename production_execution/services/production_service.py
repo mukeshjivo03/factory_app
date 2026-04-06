@@ -253,6 +253,7 @@ class ProductionExecutionService:
             date=data['date'],
             line=line,
             product=data.get('product', ''),
+            required_qty=data.get('required_qty'),
             rated_speed=data.get('rated_speed'),
             labour_count=data.get('labour_count', 0),
             other_manpower_count=data.get('other_manpower_count', 0),
@@ -301,17 +302,17 @@ class ProductionExecutionService:
 
         saved = []
         for comp in components:
-            opening = D(str(comp.get('PlannedQty', 0)))
-            issued = D(str(comp.get('IssuedQty', 0)))
+            opening = D(str(comp.get('PlannedQty') or 0))
+            issued = D(str(comp.get('IssuedQty') or 0))
             usage = ProductionMaterialUsage.objects.create(
                 production_run=run,
-                material_code=comp.get('ItemCode', ''),
-                material_name=comp.get('ItemName', ''),
+                material_code=comp.get('ItemCode') or '',
+                material_name=comp.get('ItemName') or '',
                 opening_qty=opening,
                 issued_qty=issued,
                 closing_qty=0,
                 wastage_qty=opening + issued,
-                uom=comp.get('UomCode', ''),
+                uom=comp.get('UomCode') or '',
             )
             saved.append(usage)
 
@@ -354,6 +355,12 @@ class ProductionExecutionService:
         run = self._get_run_or_raise(run_id)
         if run.status == RunStatus.COMPLETED:
             raise ValueError("Cannot start a COMPLETED run.")
+
+        # Warehouse approval gate — only allow start if approved
+        if run.warehouse_approval_status == 'PENDING':
+            raise ValueError("Cannot start production — BOM request is pending warehouse approval.")
+        if run.warehouse_approval_status == 'REJECTED':
+            raise ValueError("Cannot start production — BOM request was rejected by warehouse.")
 
         if run.segments.filter(is_active=True).exists():
             raise ValueError("Production is already running.")
