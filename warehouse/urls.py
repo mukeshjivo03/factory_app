@@ -11,6 +11,16 @@ from .views import (
     FGReceiptCreateAPI, FGReceiptListAPI, FGReceiptDetailAPI,
     FGReceiptReceiveAPI, FGReceiptPostToSAPAPI,
 )
+from .views_wms import (
+    WMSDashboardAPI,
+    WMSStockOverviewAPI,
+    WMSItemDetailAPI,
+    WMSStockMovementsAPI,
+    WMSWarehouseSummaryAPI,
+    WMSBillingOverviewAPI,
+    WMSWarehouseListAPI,
+    WMSItemGroupListAPI,
+)
 
 urlpatterns = [
     # ------------------------------------------------------------------
@@ -40,4 +50,32 @@ urlpatterns = [
     path('fg-receipts/<int:receipt_id>/', FGReceiptDetailAPI.as_view(), name='wh-fg-receipt-detail'),
     path('fg-receipts/<int:receipt_id>/receive/', FGReceiptReceiveAPI.as_view(), name='wh-fg-receipt-receive'),
     path('fg-receipts/<int:receipt_id>/post-to-sap/', FGReceiptPostToSAPAPI.as_view(), name='wh-fg-receipt-post-sap'),
+
+    # ------------------------------------------------------------------
+    # WMS — Dashboard
+    # ------------------------------------------------------------------
+    path('wms/dashboard/', WMSDashboardAPI.as_view(), name='wms-dashboard'),
+
+    # ------------------------------------------------------------------
+    # WMS — Stock
+    # ------------------------------------------------------------------
+    path('wms/stock/overview/', WMSStockOverviewAPI.as_view(), name='wms-stock-overview'),
+    path('wms/stock/items/<str:item_code>/', WMSItemDetailAPI.as_view(), name='wms-item-detail'),
+    path('wms/stock/movements/', WMSStockMovementsAPI.as_view(), name='wms-stock-movements'),
+
+    # ------------------------------------------------------------------
+    # WMS — Warehouses
+    # ------------------------------------------------------------------
+    path('wms/warehouses/summary/', WMSWarehouseSummaryAPI.as_view(), name='wms-warehouse-summary'),
+    path('wms/warehouses/', WMSWarehouseListAPI.as_view(), name='wms-warehouse-list'),
+
+    # ------------------------------------------------------------------
+    # WMS — Billing
+    # ------------------------------------------------------------------
+    path('wms/billing/overview/', WMSBillingOverviewAPI.as_view(), name='wms-billing-overview'),
+
+    # ------------------------------------------------------------------
+    # WMS — Dropdowns
+    # ------------------------------------------------------------------
+    path('wms/item-groups/', WMSItemGroupListAPI.as_view(), name='wms-item-groups'),
 ]
